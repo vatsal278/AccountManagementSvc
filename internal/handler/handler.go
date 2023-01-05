@@ -1,14 +1,7 @@
 package handler
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/PereRohit/util/request"
-	"github.com/PereRohit/util/response"
-
 	"github.com/vatsal278/AccountManagmentSvc/internal/logic"
-	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
 )
 
@@ -18,14 +11,13 @@ const AccountManagmentSvcName = "accountManagmentSvc"
 
 type AccountManagmentSvcHandler interface {
 	HealthChecker
-	Ping(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
 	logic logic.AccountManagmentSvcLogicIer
 }
 
-func NewAccountManagmentSvc(ds datasource.DataSource) AccountManagmentSvcHandler {
+func NewAccountManagmentSvc(ds datasource.DataSourceI) AccountManagmentSvcHandler {
 	svc := &accountManagmentSvc{
 		logic: logic.NewAccountManagmentSvcLogic(ds),
 	}
@@ -44,19 +36,5 @@ func (svc accountManagmentSvc) HealthCheck() (svcName string, msg string, stat b
 	}()
 	stat = svc.logic.HealthCheck()
 	set = true
-	return
-}
-
-func (svc accountManagmentSvc) Ping(w http.ResponseWriter, r *http.Request) {
-	req := &model.PingRequest{}
-
-	suggestedCode, err := request.FromJson(r, req)
-	if err != nil {
-		response.ToJson(w, suggestedCode, fmt.Sprintf("FAILED: %s", err.Error()), nil)
-		return
-	}
-	// call logic
-	resp := svc.logic.Ping(req)
-	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 	return
 }

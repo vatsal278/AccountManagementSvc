@@ -36,11 +36,9 @@ func Register(svcCfg *config.SvcConfig) *mux.Router {
 }
 
 func attachAccountManagmentSvcRoutes(m *mux.Router, svcCfg *config.SvcConfig) *mux.Router {
-	dataSource := datasource.NewDummyDs(&svcCfg.DummySvc)
+	dataSource := datasource.NewSql(svcCfg.DbSvc, "accdatabase")
 
-	svc := handler.NewAccountManagmentSvc(dataSource)
-
-	m.HandleFunc("/ping", svc.Ping).Methods(http.MethodPost)
+	_ = handler.NewAccountManagmentSvc(dataSource)
 
 	return m
 }

@@ -7,7 +7,13 @@
     "name": "accountManagmentSvc",
     "log_level": "info"
   },
-  "custom_svc": {
-    "data": "this is a custom config"
+  "db_svc": {
+    "dbDriver" : "mysql",
+    "dbUser" : "root",
+    "dbPass" : "pass",
+    "dbName" : "accmgmt",
+    "tableName" : "accdatabase",
+    "dbHost" : "localhost",
+    "dbPort" : "9085"
   }
 }
