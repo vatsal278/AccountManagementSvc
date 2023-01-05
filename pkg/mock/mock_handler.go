@@ -5,7 +5,6 @@
 package mock
 
 import (
-	http "net/http"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -48,16 +47,4 @@ func (m *MockAccountManagmentSvcHandler) HealthCheck() (string, string, bool) {
 func (mr *MockAccountManagmentSvcHandlerMockRecorder) HealthCheck() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).HealthCheck))
-}
-
-// Ping mocks base method.
-func (m *MockAccountManagmentSvcHandler) Ping(arg0 http.ResponseWriter, arg1 *http.Request) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Ping", arg0, arg1)
-}
-
-// Ping indicates an expected call of Ping.
-func (mr *MockAccountManagmentSvcHandlerMockRecorder) Ping(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).Ping), arg0, arg1)
 }

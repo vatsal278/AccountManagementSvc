@@ -8,6 +8,7 @@ import (
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	svcCfg "github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
+	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
 	"github.com/vatsal278/msgbroker/pkg/sdk"
 	"io"
 	"net/http"

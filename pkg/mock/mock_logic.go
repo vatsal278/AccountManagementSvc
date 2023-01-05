@@ -7,9 +7,7 @@ package mock
 import (
 	reflect "reflect"
 
-	model "github.com/PereRohit/util/model"
 	gomock "github.com/golang/mock/gomock"
-	model0 "github.com/vatsal278/AccountManagmentSvc/internal/model"
 )
 
 // MockAccountManagmentSvcLogicIer is a mock of AccountManagmentSvcLogicIer interface.
@@ -47,18 +45,4 @@ func (m *MockAccountManagmentSvcLogicIer) HealthCheck() bool {
 func (mr *MockAccountManagmentSvcLogicIerMockRecorder) HealthCheck() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).HealthCheck))
-}
-
-// Ping mocks base method.
-func (m *MockAccountManagmentSvcLogicIer) Ping(arg0 *model0.PingRequest) *model.Response {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ping", arg0)
-	ret0, _ := ret[0].(*model.Response)
-	return ret0
-}
-
-// Ping indicates an expected call of Ping.
-func (mr *MockAccountManagmentSvcLogicIerMockRecorder) Ping(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).Ping), arg0)
 }
