@@ -1,6 +1,11 @@
 package model
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"time"
+)
 
 type DsResponse struct {
 	Data string
@@ -16,18 +21,39 @@ type Account struct {
 	Spends           float64   `json:"spends" validate:"required" sql:"spends"`
 	CreatedOn        time.Time `json:"created_on" sql:"created_on"`
 	UpdatedOn        time.Time `json:"updated_on" sql:"updated_on"`
-	ActiveServices   []string  `json:"active_services" sql:"active_services"`
-	InactiveServices []string  `json:"inactive_services" sql:"inactive_services"`
+	ActiveServices   *Svc      `json:"active_services" sql:"active_services"`
+	InactiveServices *Svc      `json:"inactive_services" sql:"inactive_services"`
+}
+type Svc map[string]struct{}
+
+func (s *Svc) Value() (driver.Value, error) {
+	if s == nil || len(*s) == 0 {
+		return "{}", nil
+	}
+	return json.Marshal(s)
+}
+func (s *Svc) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+	by, ok := value.([]byte)
+	if !ok {
+		return errors.New("invalid type")
+	}
+	return json.Unmarshal(by, s)
 }
 
 const Schema = `
 	(
 	user_id varchar(225) not null unique,
-	account_number int not null unique,
-	income int,
-	spends int,
+	account_number int AUTO_INCREMENT,
+	income dec(18,2) DEFAULT 0.00,
+	spends dec(18,2) DEFAULT 0.00,
 	created_on timestamp not null DEFAULT CURRENT_TIMESTAMP,
 	updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	primary key (account_number)
+	active_services json,
+	inactive_services json,
+	primary key (account_number),
+	index(user_id)
 );
 	`
