@@ -197,13 +197,10 @@ func TestGet(t *testing.T) {
 			},
 			validator: func(rows []model.Account, err error) {
 				temp := model.Account{
-					Id:            "1234",
-					AccountNumber: 1,
+					Id:               "1234",
+					AccountNumber:    1,
+					InactiveServices: &model.Svc{"1": {}},
 				}
-				t.Log(len(rows))
-				//if !reflect.DeepEqual(rows, temp) {
-				//	t.Errorf("Want: %v, Got: %v", temp, rows)
-				//}
 				if !reflect.DeepEqual(rows[0].Id, temp.Id) {
 					t.Errorf("Want: %v, Got: %v", temp.Id, rows[0].Id)
 				}
@@ -230,7 +227,7 @@ func TestGet(t *testing.T) {
 		{
 			name: "SUCCESS::Get::no user found",
 			filter: map[string]interface{}{
-				"user_id": "1",
+				"account_number": 1,
 			},
 			setupFunc: func() {
 				createTestTable(t, dataBase, "newTemp", model.Schema)
@@ -247,7 +244,7 @@ func TestGet(t *testing.T) {
 		{
 			name: "failure::Get::scan error", //scan should return an error
 			filter: map[string]interface{}{
-				"user_id": "1",
+				"user_id": "12345",
 			},
 			setupFunc: func() {
 				dataBase.Exec("DROP TABLE newTemp")
@@ -255,7 +252,7 @@ func TestGet(t *testing.T) {
 	(
 	user_id varchar(225) not null unique,
 	account_number int AUTO_INCREMENT,
-	income dec(18,2) DEFAULT 0.00,
+	income text,
 	spends dec(18,2) DEFAULT 0.00,
 	created_on int DEFAULT 0,
 	updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -265,6 +262,7 @@ func TestGet(t *testing.T) {
 	index(user_id)
 );
 	`)
+
 				_, err := dataBase.Exec("INSERT INTO newTemp(user_id, created_on) VALUES(?,?)", "12345", 1)
 				if err != nil {
 					t.Error(err.Error())
@@ -279,18 +277,18 @@ func TestGet(t *testing.T) {
 				deleteTestTable(t, dataBase, "newTemp")
 			},
 			validator: func(rows []model.Account, err error) {
-				t.Log(err)
-				//if !strings.Contains(err.Error(), "sql: Scan error on column") {
-				//	t.Errorf("Want: %v, Got: %v", "sql: Scan error on column", err.Error())
-				//}
+				if !strings.Contains(err.Error(), "sql: Scan error on column") {
+					t.Errorf("Want: %v, Got: %v", "sql: Scan error on column", err.Error())
+				}
 			},
 		},
 		{
 			name:   "FAILURE:: query error",
-			filter: map[string]interface{}{"user_id": "v@mail.com"},
+			filter: map[string]interface{}{"userid": "v@mail.com"},
 			setupFunc: func() {
 				//dataBase.Exec("DROP TABLE newTemp")
-				createTestTable(t, dataBase, "newTemp", "user_id varchar(225) not null ;")
+				createTestTable(t, dataBase, "newTemp", model.Schema)
+
 			},
 			cleanupFunc: func() {
 				tableName := "newTemp"
@@ -298,12 +296,8 @@ func TestGet(t *testing.T) {
 
 			},
 			validator: func(rows []model.Account, err error) {
-				if len(rows) != 0 {
-					t.Errorf("Want: %v, Got: %v", 0, len(rows))
-				}
-				var tempErr = errors.New("Error 1054: Unknown column 'user_id' in 'field list'")
-				if !reflect.DeepEqual(tempErr.Error(), err.Error()) {
-					t.Errorf("Want: %v, Got: %v", tempErr, err)
+				if !strings.Contains(err.Error(), "Unknown column") {
+					t.Errorf("Want: %v, Got: %v", "Unknown column", err)
 				}
 			},
 		},
