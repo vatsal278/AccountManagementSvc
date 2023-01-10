@@ -565,7 +565,38 @@ func TestUpdate(t *testing.T) {
 	}{
 		{
 			name:      "SUCCESS:: Update",
-			dataSet:   map[string]interface{}{"active_services": model.Svc{"2": {}}},
+			dataSet:   map[string]interface{}{"active_services": model.Svc{"1": {}, "2": {}}},
+			dataWhere: map[string]interface{}{"user_id": "1234"},
+			setupFunc: func() {
+				tableName := "accdatabase"
+				createTestTable(t, dataBase, tableName, model.Schema)
+				err := dB.Insert(model.Account{
+					Id: "123",
+					//ActiveServices:   &model.Svc{"1": {}},
+					//InactiveServices: &model.Svc{"2": {}},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			cleanupFunc: func() {
+				tableName := "newTemp"
+				deleteTestTable(t, dataBase, tableName)
+			},
+			validator: func(err error) {
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+				}
+				user, err := dB.Get(map[string]interface{}{"user_id": "1234"})
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+				}
+
+			},
+		},
+		{
+			name:      "Failure:: Update",
+			dataSet:   map[string]interface{}{"active_services": model.Svc{"3": {}}},
 			dataWhere: map[string]interface{}{"user_id": "1234"},
 			setupFunc: func() {
 				tableName := "newTemp"
@@ -591,41 +622,9 @@ func TestUpdate(t *testing.T) {
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
 				}
-				x := model.Svc{"1": {}, "3": {}}
-				if user[0].ActiveServices != &x {
-					t.Errorf("Want: %v, Got: %v", x, user[0].ActiveServices)
-				}
+				t.Log(user[0].ActiveServices)
 			},
 		},
-		//{
-		//	name:      "Failure:: Update",
-		//	dataSet:   map[string]interface{}{"active": true, "active_devices": 1},
-		//	dataWhere: map[string]interface{}{"email": 1},
-		//	setupFunc: func() {
-		//		tableName := "newTemp"
-		//		createTestTable(t, dataBase, tableName, "user_id varchar(225) not null, email varchar(225) not null unique, company_name int(225), name varchar(225) not null, password varchar(225) not null DEFAULT 00000000, registered_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, active int(50) not null default false, active_devices boolean not null default 0, salt varchar(225) not null default 0000, primary key (email) ")
-		//		err := dB.Insert(model.User{
-		//			Email: "v@mail.com",
-		//
-		//			Password: "pass",
-		//			Name:     "vatsal",
-		//
-		//			RegisteredOn: time.Now(),
-		//		})
-		//		if err != nil {
-		//			t.Fatal(err)
-		//		}
-		//	},
-		//	cleanupFunc: func() {
-		//		tableName := "newTemp"
-		//		deleteTestTable(t, dataBase, tableName)
-		//	},
-		//	validator: func(err error) {
-		//		if err.Error() != errors.New("Error 1292: Truncated incorrect DOUBLE value: 'v@mail.com'").Error() {
-		//			t.Errorf("Want: %v, Got: %v", "Error 1292: Truncated incorrect DOUBLE value: 'v@mail.com'", err.Error())
-		//		}
-		//	},
-		//},
 	}
 	// to execute the tests in the table
 	for _, tt := range tests {

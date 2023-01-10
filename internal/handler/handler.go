@@ -1,8 +1,15 @@
 package handler
 
 import (
+	"github.com/PereRohit/util/log"
+	"github.com/PereRohit/util/request"
+	"github.com/PereRohit/util/response"
+	"github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/logic"
+	"github.com/vatsal278/AccountManagmentSvc/internal/model"
+	jwtSvc "github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
+	"net/http"
 )
 
 const AccountManagmentSvcName = "accountManagmentSvc"
@@ -11,15 +18,16 @@ const AccountManagmentSvcName = "accountManagmentSvc"
 
 type AccountManagmentSvcHandler interface {
 	HealthChecker
+	CreateAccount(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
 	logic logic.AccountManagmentSvcLogicIer
 }
 
-func NewAccountManagmentSvc(ds datasource.DataSourceI) AccountManagmentSvcHandler {
+func NewAccountManagmentSvc(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct) AccountManagmentSvcHandler {
 	svc := &accountManagmentSvc{
-		logic: logic.NewAccountManagmentSvcLogic(ds),
+		logic: logic.NewAccountManagmentSvcLogic(ds, jwtService, msgQueue, cookie),
 	}
 	AddHealthChecker(svc)
 	return svc
@@ -37,4 +45,16 @@ func (svc accountManagmentSvc) HealthCheck() (svcName string, msg string, stat b
 	stat = svc.logic.HealthCheck()
 	set = true
 	return
+}
+
+func (svc accountManagmentSvc) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	var newAccount model.Account
+	status, err := request.FromJson(r, &newAccount)
+	if err != nil {
+		log.Error(err)
+		response.ToJson(w, status, err.Error(), nil)
+		return
+	}
+	resp := svc.logic.CreateAccount(newAccount)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 }

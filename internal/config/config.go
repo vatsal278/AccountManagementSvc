@@ -61,7 +61,7 @@ type MsgQueue struct {
 	MsgBroker  sdk.MsgBrokerSvcI
 	PubId      string
 	Channel    string
-	PrivateKey rsa.PrivateKey
+	PrivateKey *rsa.PrivateKey
 }
 type CookieStruct struct {
 	Name      string        `json:"name"`
@@ -106,7 +106,7 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	dataBase := Connect(cfg.DataBase, cfg.DataBase.TableName)
 	jwtSvc := authentication.JWTAuthService(cfg.SecretKey)
 	msgBrokerSvc := sdk.NewMsgBrokerSvc(cfg.MessageQueue.SvcUrl)
-	id, err := msgBrokerSvc.RegisterPub(cfg.MessageQueue.NewAccountChannel)
+	id, err := msgBrokerSvc.RegisterPub(cfg.MessageQueue.ActivatedAccountChannel)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -126,10 +126,11 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	}
 	urlPort := cfg.ServerConfig.Host
 	if urlPort == "" {
-		urlPort = "80"
+		urlPort = "9080"
 	}
-	url := urlHost + ":" + urlPort + "/" + cfg.ServiceRouteVersion + "/activate"
-	err = msgBrokerSvc.RegisterSub("PUT", url, pubKey, cfg.MessageQueue.ActivatedAccountChannel)
+	url := urlHost + ":" + urlPort + "/" + cfg.ServiceRouteVersion + "/new_account"
+	log.Print(url)
+	err = msgBrokerSvc.RegisterSub("POST", url, pubKey, cfg.MessageQueue.NewAccountChannel)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -143,6 +144,6 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 		SvrCfg:              cfg.ServerConfig,
 		DbSvc:               DbSvc{Db: dataBase},
 		JwtSvc:              JWTSvc{JwtSvc: jwtSvc},
-		MsgBrokerSvc:        MsgQueue{MsgBroker: msgBrokerSvc, PubId: id, Channel: cfg.MessageQueue.NewAccountChannel, PrivateKey: *privateKey},
+		MsgBrokerSvc:        MsgQueue{MsgBroker: msgBrokerSvc, PubId: id, Channel: cfg.MessageQueue.ActivatedAccountChannel, PrivateKey: privateKey},
 	}
 }

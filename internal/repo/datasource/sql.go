@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
@@ -75,6 +76,7 @@ func (d sqlDs) Insert(user model.Account) error {
 }
 
 func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]interface{}) error {
+	//update accmgmt.accdatabase set active_services = JSON_INSERT(`active_services`, '$."1"','{}' ) , inactive_services = JSON_REMOVE(`inactive_services`, '$."1"') where account_number= 5;
 	queryString := fmt.Sprintf("UPDATE %s ", d.table)
 	filterClause := []string{}
 
@@ -82,6 +84,14 @@ func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]i
 		switch v.(type) {
 		case string:
 			filterClause = append(filterClause, fmt.Sprintf("%s = '%+v'", k, v))
+		case model.Svc:
+			a, ok := v.(model.Svc)
+			if !ok {
+				return errors.New("incorrect value for model.svc")
+			}
+			for x, y := range a {
+				filterClause = append(filterClause, fmt.Sprintf("%s = JSON_INSERT('%s', '$.%s'', '%+v')", k, k, x, y))
+			}
 		default:
 			filterClause = append(filterClause, fmt.Sprintf("%s = %+v", k, v))
 		}
@@ -89,9 +99,10 @@ func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]i
 	if len(filterClause) > 0 {
 		queryString += fmt.Sprintf(" SET %s", strings.Join(filterClause, " , "))
 	}
-	if strings.Contains(queryString, "active_services") || strings.Contains(queryString, "inactive_services") {
-
-	}
+	log.Print(queryString)
+	//if strings.Contains(queryString, "active_services") || strings.Contains(queryString, "inactive_services") {
+	//
+	//}
 	filterClauseWhere := []string{}
 
 	for k, v := range filterWhere {

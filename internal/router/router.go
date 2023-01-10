@@ -9,6 +9,7 @@ import (
 
 	"github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/handler"
+	middleware2 "github.com/vatsal278/AccountManagmentSvc/internal/middleware"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
 )
 
@@ -37,8 +38,12 @@ func Register(svcCfg *config.SvcConfig) *mux.Router {
 
 func attachAccountManagmentSvcRoutes(m *mux.Router, svcCfg *config.SvcConfig) *mux.Router {
 	dataSource := datasource.NewSql(svcCfg.DbSvc, "accdatabase")
+	svc := handler.NewAccountManagmentSvc(dataSource, svcCfg.JwtSvc.JwtSvc, svcCfg.MsgBrokerSvc, svcCfg.Cfg.Cookie)
+	middleware := middleware2.NewAccMgmtMiddleware(svcCfg)
 
-	_ = handler.NewAccountManagmentSvc(dataSource)
+	route1 := m.PathPrefix("/new_account").Subrouter()
+	route1.HandleFunc("", svc.CreateAccount).Methods(http.MethodPost)
+	route1.Use(middleware.ScreenRequest)
 
 	return m
 }

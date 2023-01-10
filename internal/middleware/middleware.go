@@ -23,7 +23,7 @@ type AccMgmtMiddleware struct {
 
 func NewAccMgmtMiddleware(cfg *svcCfg.SvcConfig) *AccMgmtMiddleware {
 	msgQueue := sdk.NewMsgBrokerSvc(cfg.Cfg.MessageQueue.SvcUrl)
-	msg := msgQueue.ExtractMsg(&cfg.MsgBrokerSvc.PrivateKey)
+	msg := msgQueue.ExtractMsg(nil)
 	return &AccMgmtMiddleware{
 		cfg: cfg.Cfg,
 		jwt: cfg.JwtSvc.JwtSvc,
@@ -94,6 +94,8 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 				return
 			}
 		}
+		//all, _ := ioutil.ReadAll(r.Body)
+		//log.Info(string(all))
 		decryptMsg, err := u.msg(r.Body)
 		if err != nil {
 			log.Error(err)
