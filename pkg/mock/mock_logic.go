@@ -7,7 +7,9 @@ package mock
 import (
 	reflect "reflect"
 
+	model "github.com/PereRohit/util/model"
 	gomock "github.com/golang/mock/gomock"
+	model0 "github.com/vatsal278/AccountManagmentSvc/internal/model"
 )
 
 // MockAccountManagmentSvcLogicIer is a mock of AccountManagmentSvcLogicIer interface.
@@ -31,6 +33,20 @@ func NewMockAccountManagmentSvcLogicIer(ctrl *gomock.Controller) *MockAccountMan
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAccountManagmentSvcLogicIer) EXPECT() *MockAccountManagmentSvcLogicIerMockRecorder {
 	return m.recorder
+}
+
+// CreateAccount mocks base method.
+func (m *MockAccountManagmentSvcLogicIer) CreateAccount(arg0 model0.NewAccount) *model.Response {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccount", arg0)
+	ret0, _ := ret[0].(*model.Response)
+	return ret0
+}
+
+// CreateAccount indicates an expected call of CreateAccount.
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) CreateAccount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).CreateAccount), arg0)
 }
 
 // HealthCheck mocks base method.

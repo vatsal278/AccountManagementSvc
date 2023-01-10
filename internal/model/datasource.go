@@ -15,19 +15,23 @@ type PingDs struct {
 	Data string
 }
 type Account struct {
-	Id               string    `json:"id" validate:"required" sql:"id"`
-	AccountNumber    int       `json:"account_number" validate:"required" sql:"account_number"`
-	Income           float64   `json:"income" validate:"required" sql:"income"`
-	Spends           float64   `json:"spends" validate:"required" sql:"spends"`
-	CreatedOn        time.Time `json:"created_on" sql:"created_on"`
-	UpdatedOn        time.Time `json:"updated_on" sql:"updated_on"`
-	ActiveServices   *Svc      `json:"active_services" sql:"active_services"`
-	InactiveServices *Svc      `json:"inactive_services" sql:"inactive_services"`
+	Id               string
+	AccountNumber    int
+	Income           float64
+	Spends           float64
+	CreatedOn        time.Time
+	UpdatedOn        time.Time
+	ActiveServices   *Svc
+	InactiveServices *Svc
 }
 type ColumnUpdate struct {
 	UpdateSet string
 }
 type Svc map[string]struct{}
+
+type ColumnUpdate struct {
+	UpdateSet string
+}
 
 func (s *Svc) Value() (driver.Value, error) {
 	if s == nil || len(*s) == 0 {

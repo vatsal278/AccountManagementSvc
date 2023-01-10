@@ -5,6 +5,7 @@
 package mock
 
 import (
+	http "net/http"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -31,6 +32,18 @@ func NewMockAccountManagmentSvcHandler(ctrl *gomock.Controller) *MockAccountMana
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAccountManagmentSvcHandler) EXPECT() *MockAccountManagmentSvcHandlerMockRecorder {
 	return m.recorder
+}
+
+// CreateAccount mocks base method.
+func (m *MockAccountManagmentSvcHandler) CreateAccount(arg0 http.ResponseWriter, arg1 *http.Request) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CreateAccount", arg0, arg1)
+}
+
+// CreateAccount indicates an expected call of CreateAccount.
+func (mr *MockAccountManagmentSvcHandlerMockRecorder) CreateAccount(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).CreateAccount), arg0, arg1)
 }
 
 // HealthCheck mocks base method.

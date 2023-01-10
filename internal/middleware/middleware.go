@@ -23,7 +23,7 @@ type AccMgmtMiddleware struct {
 
 func NewAccMgmtMiddleware(cfg *svcCfg.SvcConfig) *AccMgmtMiddleware {
 	msgQueue := sdk.NewMsgBrokerSvc(cfg.Cfg.MessageQueue.SvcUrl)
-	msg := msgQueue.ExtractMsg(&cfg.MsgBrokerSvc.PrivateKey)
+	msg := msgQueue.ExtractMsg(cfg.MsgBrokerSvc.PrivateKey)
 	return &AccMgmtMiddleware{
 		cfg: cfg.Cfg,
 		jwt: cfg.JwtSvc.JwtSvc,
