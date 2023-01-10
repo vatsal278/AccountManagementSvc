@@ -24,6 +24,9 @@ type Account struct {
 	ActiveServices   *Svc      `json:"active_services" sql:"active_services"`
 	InactiveServices *Svc      `json:"inactive_services" sql:"inactive_services"`
 }
+type ColumnUpdate struct {
+	UpdateSet string
+}
 type Svc map[string]struct{}
 
 func (s *Svc) Value() (driver.Value, error) {

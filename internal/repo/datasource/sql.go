@@ -22,6 +22,28 @@ func NewSql(dbSvc config.DbSvc, tableName string) DataSourceI {
 	}
 }
 
+func queryFromMap(d map[string]interface{}, join string) string {
+	var (
+		q string
+		f []string
+	)
+	for k, v := range d {
+		switch v.(type) {
+		case string:
+			f = append(f, fmt.Sprintf(`%s = '%s'`, k, v))
+		case model.ColumnUpdate:
+			a := v.(model.ColumnUpdate)
+			f = append(f, fmt.Sprintf("%s = %+v", k, a.UpdateSet))
+		default:
+			f = append(f, fmt.Sprintf(`%s = %v`, k, v))
+		}
+	}
+	if len(f) > 0 {
+		q = fmt.Sprintf(`%s`, strings.Join(f, ` `+join+` `))
+	}
+	return q
+}
+
 func (d sqlDs) HealthCheck() bool {
 	err := d.sqlSvc.Ping()
 	if err != nil {
@@ -35,21 +57,8 @@ func (d sqlDs) Get(filter map[string]interface{}) ([]model.Account, error) {
 	var user model.Account
 	var users []model.Account
 	q := fmt.Sprintf("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM %s", d.table)
-
-	filterClause := []string{}
-
-	for k, v := range filter {
-		switch v.(type) {
-		case string:
-			filterClause = append(filterClause, fmt.Sprintf("%s = '%s'", k, v))
-		default:
-			filterClause = append(filterClause, fmt.Sprintf("%s = %+v", k, v))
-		}
-	}
-	if len(filterClause) > 0 {
-		q += fmt.Sprintf(" WHERE %s", strings.Join(filterClause, " AND "))
-	}
-
+	whereQuery := queryFromMap(filter, " AND ")
+	q += " WHERE " + whereQuery
 	q += " ORDER BY account_number;"
 	rows, err := d.sqlSvc.Query(q)
 	if err != nil {
@@ -76,35 +85,12 @@ func (d sqlDs) Insert(user model.Account) error {
 
 func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]interface{}) error {
 	queryString := fmt.Sprintf("UPDATE %s ", d.table)
-	filterClause := []string{}
 
-	for k, v := range filterSet {
-		switch v.(type) {
-		case string:
-			filterClause = append(filterClause, fmt.Sprintf("%s = '%+v'", k, v))
-		default:
-			filterClause = append(filterClause, fmt.Sprintf("%s = %+v", k, v))
-		}
-	}
-	if len(filterClause) > 0 {
-		queryString += fmt.Sprintf(" SET %s", strings.Join(filterClause, " , "))
-	}
-	if strings.Contains(queryString, "active_services") || strings.Contains(queryString, "inactive_services") {
+	setQuery := queryFromMap(filterSet, " , ")
+	queryString += " SET " + setQuery
 
-	}
-	filterClauseWhere := []string{}
-
-	for k, v := range filterWhere {
-		switch v.(type) {
-		case string:
-			filterClauseWhere = append(filterClauseWhere, fmt.Sprintf("%s = '%+v'", k, v))
-		default:
-			filterClauseWhere = append(filterClauseWhere, fmt.Sprintf("%s = %+v", k, v))
-		}
-	}
-	if len(filterClauseWhere) > 0 {
-		queryString += fmt.Sprintf(" WHERE %s", strings.Join(filterClauseWhere, " AND "))
-	}
+	whereQuery := queryFromMap(filterWhere, " AND ")
+	queryString += " WHERE " + whereQuery
 
 	queryString += " ;"
 	log.Print(queryString)
@@ -113,5 +99,4 @@ func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]i
 		return err
 	}
 	return nil
-
 }

@@ -565,15 +565,13 @@ func TestUpdate(t *testing.T) {
 	}{
 		{
 			name:      "SUCCESS:: Update",
-			dataSet:   map[string]interface{}{"active_services": model.Svc{"2": {}}},
-			dataWhere: map[string]interface{}{"user_id": "1234"},
+			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', `{}`)"}},
+			dataWhere: map[string]interface{}{"user_id": "1233"},
 			setupFunc: func() {
 				tableName := "newTemp"
 				createTestTable(t, dataBase, tableName, model.Schema)
 				err := dB.Insert(model.Account{
-					Id:               "1234",
-					ActiveServices:   &model.Svc{"1": {}},
-					InactiveServices: &model.Svc{"2": {}},
+					Id: "1233",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -586,15 +584,21 @@ func TestUpdate(t *testing.T) {
 			validator: func(err error) {
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
 				}
-				user, err := dB.Get(map[string]interface{}{"user_id": "1234"})
+				user, err := dB.Get(map[string]interface{}{"user_id": "1233"})
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
 				}
-				x := model.Svc{"1": {}, "3": {}}
+				t.Log(user)
+				x := model.Svc{"1": {}}
 				if user[0].ActiveServices != &x {
 					t.Errorf("Want: %v, Got: %v", x, user[0].ActiveServices)
 				}
+				//if user[0].Income != 1000 {
+				//	t.Errorf("Want: %v, Got: %v", 1000, user[0].Income)
+				//}
 			},
 		},
 		//{
