@@ -137,7 +137,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 				svc := &accountManagmentSvc{
 					logic: mockLogic,
 				}
-				r := httptest.NewRequest("POST", "/register", Reader(""))
+				r := httptest.NewRequest("POST", "/new_account", Reader(""))
 				return svc, r
 			},
 			want: func(rec httptest.ResponseRecorder) {
@@ -164,7 +164,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 				svc := &accountManagmentSvc{
 					logic: mockLogic,
 				}
-				r := httptest.NewRequest("POST", "/register", bytes.NewBuffer([]byte("")))
+				r := httptest.NewRequest("POST", "/new_account", bytes.NewBuffer([]byte("")))
 				return svc, r
 			},
 			want: func(rec httptest.ResponseRecorder) {
