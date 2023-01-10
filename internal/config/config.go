@@ -110,7 +110,7 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	if err != nil {
 		panic(err.Error())
 	}
-	privateKey := &rsa.PrivateKey{}
+	var privateKey *rsa.PrivateKey
 	pubKey := ""
 	if cfg.MessageQueue.Key != "" {
 		privateKey, err = crypt.PEMStrAsPrivKey(cfg.MessageQueue.Key)

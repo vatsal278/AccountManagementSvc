@@ -48,7 +48,7 @@ func (svc accountManagmentSvc) HealthCheck() (svcName string, msg string, stat b
 }
 
 func (svc accountManagmentSvc) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	var newAccount model.Account
+	var newAccount model.NewAccount
 	status, err := request.FromJson(r, &newAccount)
 	if err != nil {
 		log.Error(err)

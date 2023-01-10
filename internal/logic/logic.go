@@ -16,7 +16,7 @@ import (
 
 type AccountManagmentSvcLogicIer interface {
 	HealthCheck() bool
-	CreateAccount(account model.Account) *respModel.Response
+	CreateAccount(account model.NewAccount) *respModel.Response
 }
 
 type accountManagmentSvcLogic struct {
@@ -40,8 +40,8 @@ func (l accountManagmentSvcLogic) HealthCheck() bool {
 	return l.DsSvc.HealthCheck()
 }
 
-func (l accountManagmentSvcLogic) CreateAccount(account model.Account) *respModel.Response {
-	result, err := l.DsSvc.Get(map[string]interface{}{"user_id": account.Id})
+func (l accountManagmentSvcLogic) CreateAccount(account model.NewAccount) *respModel.Response {
+	result, err := l.DsSvc.Get(map[string]interface{}{"user_id": account.UserId})
 	if err != nil {
 		log.Error(err.Error())
 		return &respModel.Response{
@@ -51,14 +51,14 @@ func (l accountManagmentSvcLogic) CreateAccount(account model.Account) *respMode
 		}
 	}
 	if len(result) != 0 {
-		log.Error("acc for this id already there")
+		log.Error(codes.GetErr(codes.ErrAccExists))
 		return &respModel.Response{
 			Status:  http.StatusBadRequest,
-			Message: "acc for this id already there",
+			Message: codes.GetErr(codes.ErrAccExists),
 			Data:    nil,
 		}
 	}
-	err = l.DsSvc.Insert(account)
+	err = l.DsSvc.Insert(model.Account{Id: account.UserId})
 	if err != nil {
 		log.Error(codes.GetErr(codes.ErrCreatingAccount))
 		return &respModel.Response{
@@ -75,7 +75,7 @@ func (l accountManagmentSvcLogic) CreateAccount(account model.Account) *respMode
 			return
 		}
 		return
-	}(account.Id, l.msgQueue.PubId, l.msgQueue.Channel)
+	}(account.UserId, l.msgQueue.PubId, l.msgQueue.Channel)
 	return &respModel.Response{
 		Status:  http.StatusCreated,
 		Message: "SUCCESS",

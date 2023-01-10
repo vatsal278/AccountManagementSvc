@@ -5,7 +5,7 @@ type PingRequest struct {
 }
 
 type NewAccount struct {
-	UserId           string `json:"user_id" validate:"required"`
-	ActiveServices   Svc    `json:"active_services" validate:"required"`
-	InactiveServices Svc    `json:"inactive_services" validate:"required"`
+	UserId string `json:"user_id" validate:"required"`
+	//ActiveServices   Svc    `json:"active_services" validate:"required"`
+	//InactiveServices Svc    `json:"inactive_services" validate:"required"`
 }
