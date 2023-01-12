@@ -27,11 +27,7 @@ type Account struct {
 type ColumnUpdate struct {
 	UpdateSet string
 }
-type Svc map[string]struct{}
-
-type ColumnUpdate struct {
-	UpdateSet string
-}
+type Svc map[string]*struct{}
 
 func (s *Svc) Value() (driver.Value, error) {
 	if s == nil || len(*s) == 0 {

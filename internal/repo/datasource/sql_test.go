@@ -565,7 +565,7 @@ func TestUpdate(t *testing.T) {
 	}{
 		{
 			name:      "SUCCESS:: Update",
-			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', `{}`)"}},
+			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "income": model.ColumnUpdate{UpdateSet: "income+100"}},
 			dataWhere: map[string]interface{}{"user_id": "1233"},
 			setupFunc: func() {
 				tableName := "newTemp"
@@ -591,45 +591,83 @@ func TestUpdate(t *testing.T) {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
 					return
 				}
-				t.Log(user)
-				x := model.Svc{"1": {}}
-				if user[0].ActiveServices != &x {
-					t.Errorf("Want: %v, Got: %v", x, user[0].ActiveServices)
+				if user[0].Income != 100 {
+					t.Errorf("Want: %v, Got: %v", 1000, user[0].Income)
 				}
-				//if user[0].Income != 1000 {
-				//	t.Errorf("Want: %v, Got: %v", 1000, user[0].Income)
-				//}
+				x := model.Account{InactiveServices: &model.Svc{"1": {}}}
+				if !reflect.DeepEqual(user[0].InactiveServices, x.InactiveServices) {
+					t.Errorf("Want: %v, Got: %v", x.InactiveServices, user[0].ActiveServices)
+					return
+				}
 			},
 		},
-		//{
-		//	name:      "Failure:: Update",
-		//	dataSet:   map[string]interface{}{"active": true, "active_devices": 1},
-		//	dataWhere: map[string]interface{}{"email": 1},
-		//	setupFunc: func() {
-		//		tableName := "newTemp"
-		//		createTestTable(t, dataBase, tableName, "user_id varchar(225) not null, email varchar(225) not null unique, company_name int(225), name varchar(225) not null, password varchar(225) not null DEFAULT 00000000, registered_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, active int(50) not null default false, active_devices boolean not null default 0, salt varchar(225) not null default 0000, primary key (email) ")
-		//		err := dB.Insert(model.User{
-		//			Email: "v@mail.com",
-		//
-		//			Password: "pass",
-		//			Name:     "vatsal",
-		//
-		//			RegisteredOn: time.Now(),
-		//		})
-		//		if err != nil {
-		//			t.Fatal(err)
-		//		}
-		//	},
-		//	cleanupFunc: func() {
-		//		tableName := "newTemp"
-		//		deleteTestTable(t, dataBase, tableName)
-		//	},
-		//	validator: func(err error) {
-		//		if err.Error() != errors.New("Error 1292: Truncated incorrect DOUBLE value: 'v@mail.com'").Error() {
-		//			t.Errorf("Want: %v, Got: %v", "Error 1292: Truncated incorrect DOUBLE value: 'v@mail.com'", err.Error())
-		//		}
-		//	},
-		//},
+		{
+			name:      "Success:: Update:: removing and inserting",
+			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"1\"')"}},
+			dataWhere: map[string]interface{}{"user_id": "1233"},
+			setupFunc: func() {
+				tableName := "newTemp"
+				createTestTable(t, dataBase, tableName, model.Schema)
+				err := dB.Insert(model.Account{
+					Id:               "1233",
+					InactiveServices: &model.Svc{"1": {}},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			cleanupFunc: func() {
+				tableName := "newTemp"
+				deleteTestTable(t, dataBase, tableName)
+			},
+			validator: func(err error) {
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
+				}
+				user, err := dB.Get(map[string]interface{}{"user_id": "1233"})
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
+				}
+				x := model.Account{ActiveServices: &model.Svc{"1": {}}}
+				if user[0].ActiveServices != x.ActiveServices {
+					t.Errorf("Want: %v, Got: %v", x.ActiveServices, user[0].ActiveServices)
+					return
+				}
+				y := &model.Svc{}
+				if user[0].InactiveServices != y {
+					t.Errorf("Want: %v, Got: %v", y, user[0].InactiveServices)
+
+				}
+			},
+		},
+		{
+			name:      "Failure:: Update::",
+			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"1\"')"}},
+			dataWhere: map[string]interface{}{"abc": "1233"},
+			setupFunc: func() {
+				tableName := "newTemp"
+				createTestTable(t, dataBase, tableName, model.Schema)
+				err := dB.Insert(model.Account{
+					Id:               "1233",
+					InactiveServices: &model.Svc{"1": {}},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			cleanupFunc: func() {
+				tableName := "newTemp"
+				deleteTestTable(t, dataBase, tableName)
+			},
+			validator: func(err error) {
+				if err.Error() != errors.New("Error 1054 (42S22): Unknown column 'abc' in 'where clause'").Error() {
+					t.Errorf("Want: %v, Got: %v", "Error 1054 (42S22): Unknown column 'abc' in 'where clause'", err.Error())
+					return
+				}
+			},
+		},
 	}
 	// to execute the tests in the table
 	for _, tt := range tests {

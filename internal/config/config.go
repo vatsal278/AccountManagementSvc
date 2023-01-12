@@ -61,7 +61,7 @@ type MsgQueue struct {
 	MsgBroker  sdk.MsgBrokerSvcI
 	PubId      string
 	Channel    string
-	PrivateKey *rsa.PrivateKey
+	PrivateKey rsa.PrivateKey
 }
 type CookieStruct struct {
 	Name      string        `json:"name"`
@@ -129,7 +129,6 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 		urlPort = "9080"
 	}
 	url := urlHost + ":" + urlPort + "/" + cfg.ServiceRouteVersion + "/new_account"
-	log.Print(url)
 	err = msgBrokerSvc.RegisterSub("POST", url, pubKey, cfg.MessageQueue.NewAccountChannel)
 	if err != nil {
 		panic(err.Error())
@@ -144,6 +143,6 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 		SvrCfg:              cfg.ServerConfig,
 		DbSvc:               DbSvc{Db: dataBase},
 		JwtSvc:              JWTSvc{JwtSvc: jwtSvc},
-		MsgBrokerSvc:        MsgQueue{MsgBroker: msgBrokerSvc, PubId: id, Channel: cfg.MessageQueue.ActivatedAccountChannel, PrivateKey: privateKey},
+		MsgBrokerSvc:        MsgQueue{MsgBroker: msgBrokerSvc, PubId: id, Channel: cfg.MessageQueue.ActivatedAccountChannel, PrivateKey: *privateKey},
 	}
 }
