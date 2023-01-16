@@ -45,5 +45,9 @@ func attachAccountManagmentSvcRoutes(m *mux.Router, svcCfg *config.SvcConfig) *m
 	route1.HandleFunc("", svc.CreateAccount).Methods(http.MethodPost)
 	route1.Use(middleware.ScreenRequest)
 
+	route2 := m.PathPrefix("/account").Subrouter()
+	route2.HandleFunc("", svc.AccountSummary).Methods(http.MethodGet)
+	route2.Use(middleware.ExtractUser)
+
 	return m
 }

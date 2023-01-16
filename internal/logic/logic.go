@@ -17,6 +17,7 @@ import (
 type AccountManagmentSvcLogicIer interface {
 	HealthCheck() bool
 	CreateAccount(account model.NewAccount) *respModel.Response
+	AccountDetails(id string) *respModel.Response
 }
 
 type accountManagmentSvcLogic struct {
@@ -80,5 +81,36 @@ func (l accountManagmentSvcLogic) CreateAccount(account model.NewAccount) *respM
 		Status:  http.StatusCreated,
 		Message: "SUCCESS",
 		Data:    nil,
+	}
+}
+
+func (l accountManagmentSvcLogic) AccountDetails(id string) *respModel.Response {
+	acc, err := l.DsSvc.Get(map[string]interface{}{"user_id": id})
+	if err != nil {
+		log.Error(err)
+		return &respModel.Response{
+			Status:  http.StatusInternalServerError,
+			Message: codes.GetErr(codes.ErrFetchingUser),
+			Data:    nil,
+		}
+	}
+	if len(acc) == 0 {
+		return &respModel.Response{
+			Status:  http.StatusBadRequest,
+			Message: codes.GetErr(codes.AccNotFound),
+			Data:    nil,
+		}
+	}
+	resp := model.AccountSummary{
+		AccountNumber:    acc[0].AccountNumber,
+		Income:           acc[0].Income,
+		Spends:           acc[0].Spends,
+		ActiveServices:   acc[0].ActiveServices,
+		InactiveServices: acc[0].InactiveServices,
+	}
+	return &respModel.Response{
+		Status:  http.StatusOK,
+		Message: "SUCCESS",
+		Data:    resp,
 	}
 }

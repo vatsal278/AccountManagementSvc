@@ -3,6 +3,7 @@ module github.com/vatsal278/AccountManagmentSvc
 go 1.18
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/PereRohit/util v0.0.4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.7.0
