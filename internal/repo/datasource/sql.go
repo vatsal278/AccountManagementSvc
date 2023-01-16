@@ -62,7 +62,6 @@ func (d sqlDs) Get(filter map[string]interface{}) ([]model.Account, error) {
 		q += " WHERE " + whereQuery
 	}
 	q += " ORDER BY account_number;"
-	log.Print(q)
 	rows, err := d.sqlSvc.Query(q)
 	if err != nil {
 		return nil, err
@@ -79,6 +78,7 @@ func (d sqlDs) Get(filter map[string]interface{}) ([]model.Account, error) {
 
 func (d sqlDs) Insert(user model.Account) error {
 	queryString := fmt.Sprintf("INSERT INTO %s", d.table)
+	log.Print("(user_id, active_services, inactive_services) VALUES(?,?,?)", user.Id, user.ActiveServices, user.InactiveServices)
 	_, err := d.sqlSvc.Exec(queryString+"(user_id, active_services, inactive_services) VALUES(?,?,?)", user.Id, user.ActiveServices, user.InactiveServices)
 	if err != nil {
 		return err
@@ -88,6 +88,7 @@ func (d sqlDs) Insert(user model.Account) error {
 
 func (d sqlDs) Update(filterSet map[string]interface{}, filterWhere map[string]interface{}) error {
 	queryString := fmt.Sprintf("UPDATE %s ", d.table)
+
 	setQuery := queryFromMap(filterSet, " , ")
 	if setQuery != "" {
 		queryString += " SET " + setQuery

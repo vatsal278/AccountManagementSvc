@@ -1,35 +1,18 @@
 package datasource
 
 import (
-	"database/sql"
 	"errors"
-	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/go-sql-driver/mysql"
 	svcCfg "github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
-	"log"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 )
 
-func createTestTable(t *testing.T, db *sql.DB, tableName string, tableStruct string) {
-	q := fmt.Sprintf("CREATE Table IF NOT EXISTS %s %s;", tableName, tableStruct)
-	_, err := db.Exec(q)
-	log.Print(q)
-	if err != nil {
-		t.Log(err)
-	}
-}
-
-func deleteTestTable(t *testing.T, db *sql.DB, tableName string) {
-	q := fmt.Sprintf("DROP TABLE %s", tableName)
-	_, err := db.Exec(q)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-}
 func TestSqlDs_HealthCheck(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping testing due to unavailability of testing environment")
@@ -48,7 +31,7 @@ func TestSqlDs_HealthCheck(t *testing.T) {
 	svcConfig := svcCfg.SvcConfig{
 		DbSvc: svcCfg.DbSvc{Db: dataBase},
 	}
-	dB := NewSql(svcCfg.DbSvc(svcConfig.DbSvc), "newTemp")
+	dB := NewSql(svcConfig.DbSvc, "newTemp")
 
 	tests := []struct {
 		name        string
@@ -79,31 +62,9 @@ func TestSqlDs_HealthCheck(t *testing.T) {
 	}
 }
 func TestGet(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping testing due to unavailability of testing environment")
-	}
-	dbcfg := svcCfg.DbCfg{
-		Port:      "9085",
-		Host:      "localhost",
-		Driver:    "mysql",
-		User:      "root",
-		Pass:      "pass",
-		DbName:    "accmgmt",
-		TableName: "newTemp",
-	}
-	dataBase := svcCfg.Connect(dbcfg, dbcfg.TableName)
-	svcConfig := svcCfg.SvcConfig{
-		DbSvc: svcCfg.DbSvc{Db: dataBase},
-		Cfg:   &svcCfg.Config{DataBase: dbcfg},
-	}
-	dB := sqlDs{
-		sqlSvc: svcConfig.DbSvc.Db,
-		table:  svcConfig.Cfg.DataBase.TableName,
-	}
-
 	tests := []struct {
 		name        string
-		setupFunc   func()
+		setupFunc   func() sqlDs
 		cleanupFunc func()
 		filter      map[string]interface{}
 		validator   func([]model.Account, error)
@@ -114,30 +75,29 @@ func TestGet(t *testing.T) {
 			filter: map[string]interface{}{
 				"user_id": "1234",
 			},
-			setupFunc: func() {
-				dataBase.Exec("DROP TABLE newTemp")
-				createTestTable(t, dataBase, "newTemp", model.Schema)
-				err := dB.Insert(model.Account{
-					Id:             "1234",
-					ActiveServices: nil,
-					InactiveServices: &model.Svc{
-						"1": {},
-					},
-				})
+			setupFunc: func() sqlDs {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err.Error())
+					t.Fail()
 				}
-			},
-			cleanupFunc: func() {
-				deleteTestTable(t, dataBase, "newTemp")
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectQuery("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM newTemp WHERE user_id = '1234' ORDER BY account_number;").WillReturnRows(sqlmock.NewRows([]string{"user_id", "account_number", "income", "spends", "created_on", "updated_on", "active_services", "inactive_services"}).AddRow("1234", 1, 0.00, 0.00, time.Now(), time.Now(), &model.Svc{"1": {}}, &model.Svc{"1": {}}).RowError(1, errors.New("")))
+				return dB
 			},
 			validator: func(rows []model.Account, err error) {
 				temp := model.Account{
-					Id:            "1234",
-					AccountNumber: 1,
-					CreatedOn:     time.Now(),
+					Id:               "1234",
+					AccountNumber:    1,
+					CreatedOn:        time.Now(),
+					ActiveServices:   &model.Svc{"1": {}},
+					InactiveServices: &model.Svc{"1": {}},
 				}
-
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err)
+				}
 				if !reflect.DeepEqual(rows[0].Id, temp.Id) {
 					t.Errorf("Want: %v, Got: %v", temp.Id, rows[0].Id)
 				}
@@ -150,15 +110,13 @@ func TestGet(t *testing.T) {
 				if !reflect.DeepEqual(rows[0].Spends, temp.Spends) {
 					t.Errorf("Want: %v, Got: %v", temp.Spends, rows[0].Spends)
 				}
-				if !reflect.DeepEqual(rows[0].Income, temp.Income) {
-					t.Errorf("Want: %v, Got: %v", temp.Income, rows[0].Income)
+				if !reflect.DeepEqual(rows[0].ActiveServices, temp.ActiveServices) {
+					t.Errorf("Want: %v, Got: %v", temp.ActiveServices, rows[0].ActiveServices)
 				}
-				if !reflect.DeepEqual(rows[0].ActiveServices, &model.Svc{}) {
-					t.Errorf("Want: %v, Got: %v", temp.Income, rows[0].Income)
+				if !reflect.DeepEqual(rows[0].InactiveServices, temp.InactiveServices) {
+					t.Errorf("Want: %v, Got: %v", temp.InactiveServices, rows[0].InactiveServices)
 				}
-				if err != nil {
-					t.Errorf("Want: %v, Got: %v", nil, err)
-				}
+
 			},
 		},
 		{
@@ -166,40 +124,26 @@ func TestGet(t *testing.T) {
 			filter: map[string]interface{}{
 				"user_id": "1234",
 			},
-			setupFunc: func() {
-				dataBase.Exec("DROP TABLE newTemp")
-				createTestTable(t, dataBase, "newTemp", model.Schema)
-				err := dB.Insert(model.Account{
-					Id:             "1234",
-					ActiveServices: nil,
-					InactiveServices: &model.Svc{
-						"1": {},
-					},
-				})
+			setupFunc: func() sqlDs {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err.Error())
+					t.Fail()
 				}
-				err = dB.Insert(model.Account{
-					Id: "4321",
-					ActiveServices: &model.Svc{
-						"2": {},
-					},
-					InactiveServices: &model.Svc{
-						"1": {},
-					},
-				})
-				if err != nil {
-					t.Fatal(err.Error())
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
 				}
-			},
-			cleanupFunc: func() {
-				deleteTestTable(t, dataBase, "newTemp")
+				mock.ExpectQuery("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM newTemp WHERE user_id = '1234' ORDER BY account_number;").WillReturnRows(sqlmock.NewRows([]string{"user_id", "account_number", "income", "spends", "created_on", "updated_on", "active_services", "inactive_services"}).AddRow("1234", 1, 0.00, 0.00, time.Now(), time.Now(), &model.Svc{"1": {}}, &model.Svc{"1": {}}).AddRow("12345", 1, 0.00, 0.00, time.Now(), time.Now(), &model.Svc{"1": {}}, &model.Svc{"1": {}}))
+				return dB
 			},
 			validator: func(rows []model.Account, err error) {
 				temp := model.Account{
 					Id:               "1234",
 					AccountNumber:    1,
 					InactiveServices: &model.Svc{"1": {}},
+				}
+				if err != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err)
 				}
 				if !reflect.DeepEqual(rows[0].Id, temp.Id) {
 					t.Errorf("Want: %v, Got: %v", temp.Id, rows[0].Id)
@@ -216,11 +160,8 @@ func TestGet(t *testing.T) {
 				if !reflect.DeepEqual(rows[0].InactiveServices, temp.InactiveServices) {
 					t.Errorf("Want: %v, Got: %v", temp.InactiveServices, rows[0].InactiveServices)
 				}
-				if !reflect.DeepEqual(rows[0].ActiveServices, &model.Svc{}) {
-					t.Errorf("Want: %v, Got: %v", temp.Income, rows[0].Income)
-				}
-				if err != nil {
-					t.Errorf("Want: %v, Got: %v", nil, err)
+				if !reflect.DeepEqual(rows[0].ActiveServices, temp.InactiveServices) {
+					t.Errorf("Want: %v, Got: %v", temp.InactiveServices, rows[0].InactiveServices)
 				}
 			},
 		},
@@ -229,11 +170,17 @@ func TestGet(t *testing.T) {
 			filter: map[string]interface{}{
 				"account_number": 1,
 			},
-			setupFunc: func() {
-				createTestTable(t, dataBase, "newTemp", model.Schema)
-			},
-			cleanupFunc: func() {
-				deleteTestTable(t, dataBase, "newTemp")
+			setupFunc: func() sqlDs {
+				db, mock, err := sqlmock.New()
+				if err != nil {
+					t.Fail()
+				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectQuery("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM newTemp WHERE user_id = '1234' ORDER BY account_number;").WillReturnRows(sqlmock.NewRows([]string{"user_id", "account_number", "income", "spends", "created_on", "updated_on", "active_services", "inactive_services"}))
+				return dB
 			},
 			validator: func(rows []model.Account, err error) {
 				if len(rows) != 0 {
@@ -246,35 +193,17 @@ func TestGet(t *testing.T) {
 			filter: map[string]interface{}{
 				"user_id": "12345",
 			},
-			setupFunc: func() {
-				dataBase.Exec("DROP TABLE newTemp")
-				createTestTable(t, dataBase, "newTemp", `
-	(
-	user_id varchar(225) not null unique,
-	account_number int AUTO_INCREMENT,
-	income text,
-	spends dec(18,2) DEFAULT 0.00,
-	created_on int DEFAULT 0,
-	updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	active_services json,
-	inactive_services json,
-	primary key (account_number),
-	index(user_id)
-);
-	`)
-
-				_, err := dataBase.Exec("INSERT INTO newTemp(user_id, created_on) VALUES(?,?)", "12345", 1)
+			setupFunc: func() sqlDs {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Error(err.Error())
-					return
+					t.Fail()
 				}
-				if err != nil {
-					t.Fatal(err.Error())
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
 				}
-
-			},
-			cleanupFunc: func() {
-				deleteTestTable(t, dataBase, "newTemp")
+				mock.ExpectQuery("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM newTemp WHERE user_id = '12345' ORDER BY account_number;").WillReturnRows(sqlmock.NewRows([]string{"user_id", "account_number", "income", "spends", "created_on", "updated_on", "active_services", "inactive_services"}).AddRow("12345	", 1, 0.00, "abc", time.Now(), time.Now(), &model.Svc{"1": {}}, &model.Svc{"1": {}}))
+				return dB
 			},
 			validator: func(rows []model.Account, err error) {
 				if !strings.Contains(err.Error(), "sql: Scan error on column") {
@@ -284,16 +213,18 @@ func TestGet(t *testing.T) {
 		},
 		{
 			name:   "FAILURE:: query error",
-			filter: map[string]interface{}{"userid": "v@mail.com"},
-			setupFunc: func() {
-				//dataBase.Exec("DROP TABLE newTemp")
-				createTestTable(t, dataBase, "newTemp", model.Schema)
-
-			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-
+			filter: map[string]interface{}{"userid": "1234"},
+			setupFunc: func() sqlDs {
+				db, mock, err := sqlmock.New()
+				if err != nil {
+					t.Fail()
+				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectQuery("SELECT user_id, account_number, income, spends, created_on, updated_on, active_services, inactive_services FROM newTemp WHERE userid = '1234' ORDER BY account_number;").WillReturnError(errors.New("Unknown column"))
+				return dB
 			},
 			validator: func(rows []model.Account, err error) {
 				if !strings.Contains(err.Error(), "Unknown column") {
@@ -307,13 +238,9 @@ func TestGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// STEP 1: seting up all instances for the specific test case
-			if tt.setupFunc != nil {
-				tt.setupFunc()
-			}
-
+			db := tt.setupFunc()
 			// STEP 2: call the test function
-			rows, err := dB.Get(tt.filter)
-			t.Log(rows)
+			rows, err := db.Get(tt.filter)
 
 			// STEP 3: validation of output
 			if tt.validator != nil {
@@ -330,182 +257,105 @@ func TestGet(t *testing.T) {
 
 //
 func TestInsert(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping testing due to unavailability of testing environment")
-	}
-	//add short flag for dbtest case
-	dbcfg := svcCfg.DbCfg{
-		Port:      "9085",
-		Host:      "localhost",
-		Driver:    "mysql",
-		User:      "root",
-		Pass:      "pass",
-		DbName:    "accmgmt",
-		TableName: "newTemp",
-	}
-	dataBase := svcCfg.Connect(dbcfg, dbcfg.TableName)
-	svcConfig := svcCfg.SvcConfig{
-		Cfg:   &svcCfg.Config{DataBase: dbcfg},
-		DbSvc: svcCfg.DbSvc{Db: dataBase},
-	}
-	dB := sqlDs{
-		sqlSvc: svcConfig.DbSvc.Db,
-		table:  svcConfig.Cfg.DataBase.TableName,
-	}
 	// table driven tests
 	tests := []struct {
 		name        string
 		tableName   string
 		data        model.Account
-		setupFunc   func()
+		setupFunc   func() (sqlDs, sqlmock.Sqlmock)
 		cleanupFunc func()
 		filter      map[string]interface{}
-		validator   func(error)
+		validator   func(sqlmock.Sqlmock, error)
 	}{
 		{
 			name: "SUCCESS:: Insert Article",
 			data: model.Account{
-				Id:               "12345",
+				Id:               "1",
 				ActiveServices:   &model.Svc{"1": {}},
-				InactiveServices: &model.Svc{"2": {}},
+				InactiveServices: &model.Svc{},
 			},
-			setupFunc: func() {
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, model.Schema)
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
+				if err != nil {
+					t.Fail()
+				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				m := mock.ExpectExec(regexp.QuoteMeta("INSERT INTO newTemp(user_id, active_services, inactive_services) VALUES(?,?,?)")).WithArgs("1", &model.Svc{"1": {}}, &model.Svc{})
+				m.WillReturnError(nil)
+				m.WillReturnResult(sqlmock.NewResult(1, 1))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
+			validator: func(mock sqlmock.Sqlmock, err error) {
+				if mock.ExpectationsWereMet() != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
+				}
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
-				}
-				user, err := dB.Get(map[string]interface{}{"user_id": "12345"})
-				if err != nil {
-					t.Errorf("unable to get data from db")
-				}
-				temp := model.Account{
-					Id:               "12345",
-					AccountNumber:    1,
-					ActiveServices:   &model.Svc{"1": {}},
-					InactiveServices: &model.Svc{"2": {}},
-				}
-				if !reflect.DeepEqual(user[0].Id, temp.Id) {
-					t.Errorf("Want: %v, Got: %v", temp.Id, user[0].Id)
-				}
-				if !reflect.DeepEqual(user[0].ActiveServices, temp.ActiveServices) {
-					t.Errorf("Want: %v, Got: %v", temp.ActiveServices, user[0].ActiveServices)
-				}
-				if !reflect.DeepEqual(user[0].InactiveServices, temp.InactiveServices) {
-					t.Errorf("Want: %v, Got: %v", temp.InactiveServices, user[0].InactiveServices)
-				}
-				if !reflect.DeepEqual(user[0].AccountNumber, temp.AccountNumber) {
-					t.Errorf("Want: %v, Got: %v", temp.AccountNumber, user[0].AccountNumber)
-				}
-				if !reflect.DeepEqual(user[0].Income, temp.Income) {
-					t.Errorf("Want: %v, Got: %v", temp.Income, user[0].Income)
-				}
-				if !reflect.DeepEqual(user[0].Spends, temp.Spends) {
-					t.Errorf("Want: %v, Got: %v", temp.Spends, user[0].Spends)
-				}
-				if err != nil {
-					t.Errorf("Want: %v, Got: %v", nil, err)
+					return
 				}
 			},
 		},
 		{
 			name: "SUCCESS:: Insert Article:: Insert Article when data already present",
 			data: model.Account{
-				Id:               "12345",
+				Id:               "2",
 				ActiveServices:   &model.Svc{"1": {}},
 				InactiveServices: &model.Svc{"2": {}},
 			},
-			setupFunc: func() {
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, model.Schema)
-				err := dB.Insert(model.Account{
-					Id:               "01",
-					ActiveServices:   nil,
-					InactiveServices: nil,
-				})
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err)
+					t.Fail()
 				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				m := mock.ExpectExec(regexp.QuoteMeta("INSERT INTO newTemp(user_id, active_services, inactive_services) VALUES(?,?,?)")).WithArgs("2", &model.Svc{"1": {}}, &model.Svc{"2": {}})
+				m.WillReturnError(nil)
+				m.WillReturnResult(sqlmock.NewResult(2, 1))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
+			validator: func(mock sqlmock.Sqlmock, err error) {
+				if mock.ExpectationsWereMet() != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
+				}
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
-				}
-				user, err := dB.Get(map[string]interface{}{"user_id": "01"})
-				if err != nil {
-					t.Errorf("unable to get data from db")
-				}
-				temp := model.Account{
-					Id:               "01",
-					AccountNumber:    1,
-					ActiveServices:   &model.Svc{},
-					InactiveServices: &model.Svc{},
-				}
-				if !reflect.DeepEqual(user[0].Id, temp.Id) {
-					t.Errorf("Want: %v, Got: %v", temp.Id, user[0].Id)
-				}
-				if !reflect.DeepEqual(user[0].ActiveServices, temp.ActiveServices) {
-					t.Errorf("Want: %v, Got: %v", temp.ActiveServices, user[0].ActiveServices)
-				}
-				if !reflect.DeepEqual(user[0].InactiveServices, temp.InactiveServices) {
-					t.Errorf("Want: %v, Got: %v", temp.InactiveServices, user[0].InactiveServices)
-				}
-				if !reflect.DeepEqual(user[0].AccountNumber, temp.AccountNumber) {
-					t.Errorf("Want: %v, Got: %v", temp.AccountNumber, user[0].AccountNumber)
-				}
-				if !reflect.DeepEqual(user[0].Income, temp.Income) {
-					t.Errorf("Want: %v, Got: %v", temp.Income, user[0].Income)
-				}
-				if !reflect.DeepEqual(user[0].Spends, temp.Spends) {
-					t.Errorf("Want: %v, Got: %v", temp.Spends, user[0].Spends)
-				}
-				if err != nil {
-					t.Errorf("Want: %v, Got: %v", nil, err)
+					return
 				}
 			},
 		},
 		{
-			name: "FAILURE:: column mismatch",
+			name: "FAILURE:: insert :: sql error",
 			data: model.Account{
+				Id:               "2",
 				ActiveServices:   &model.Svc{"1": {}},
-				InactiveServices: &model.Svc{"2": {}},
+				InactiveServices: nil,
 			},
-			setupFunc: func() {
-				dataBase.Exec("DROP TABLE newTemp")
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, `
-	(
-	user_id int not null unique,
-	account_number int AUTO_INCREMENT,
-	income dec(18,2) DEFAULT 0.00,
-	spends dec(18,2) DEFAULT 0.00,
-	created_on timestamp not null DEFAULT CURRENT_TIMESTAMP,
-	updated_on timestamp not null DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	active_services int,
-	inactive_services int,
-	primary key (account_number),
-	index(user_id)
-);
-	`)
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
+				if err != nil {
+					t.Fail()
+				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				m := mock.ExpectExec(regexp.QuoteMeta("INSERT INTO newTemp(user_id, active_services, inactive_services) VALUES(?,?,?)")).WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg())
+				m.WillReturnError(errors.New("sql error"))
+				m.WillReturnResult(sqlmock.NewResult(0, 0))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
-				var tempErr = errors.New("Error 1366 (HY000): Incorrect integer value: for column 'active_services' at row 1")
-				if !strings.Contains(err.Error(), "Error 1366") {
-					t.Errorf("Want: %v, Got: %v", tempErr, err)
+			validator: func(mock sqlmock.Sqlmock, err error) {
+				if err.Error() != errors.New("sql error").Error() {
+					t.Errorf("Want: %v, Got: %v", "sql error", err.Error())
+					return
 				}
 			},
 		},
@@ -513,14 +363,12 @@ func TestInsert(t *testing.T) {
 	// to execute the tests in the table
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupFunc != nil {
-				tt.setupFunc()
-			}
+			db, mock := tt.setupFunc()
 			// STEP 2: call the test function
-			err := dB.Insert(tt.data)
+			err := db.Insert(tt.data)
 			// STEP 3: validation of output
 			if tt.validator != nil {
-				tt.validator(err)
+				tt.validator(mock, err)
 			}
 			// STEP 4: clean up/remove up all instances for the specific test case
 			if tt.cleanupFunc != nil {
@@ -531,72 +379,39 @@ func TestInsert(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping testing due to unavailability of testing environment")
-	}
-	dbcfg := svcCfg.DbCfg{
-		Port:      "9085",
-		Host:      "localhost",
-		Driver:    "mysql",
-		User:      "root",
-		Pass:      "pass",
-		DbName:    "accmgmt",
-		TableName: "newTemp",
-	}
-	dataBase := svcCfg.Connect(dbcfg, dbcfg.TableName)
-	svcConfig := svcCfg.SvcConfig{
-		Cfg:   &svcCfg.Config{DataBase: dbcfg},
-		DbSvc: svcCfg.DbSvc{Db: dataBase},
-	}
-	dB := sqlDs{
-		sqlSvc: svcConfig.DbSvc.Db,
-		table:  svcConfig.Cfg.DataBase.TableName,
-	}
-	// table driven tests
 	tests := []struct {
 		name        string
 		tableName   string
 		dataSet     map[string]interface{}
 		dataWhere   map[string]interface{}
-		setupFunc   func()
+		setupFunc   func() (sqlDs, sqlmock.Sqlmock)
 		cleanupFunc func()
 		filter      map[string]interface{}
-		validator   func(error)
+		validator   func(error, sqlmock.Sqlmock)
 	}{
 		{
 			name:      "SUCCESS:: Update",
-			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "income": model.ColumnUpdate{UpdateSet: "income+100"}},
-			dataWhere: map[string]interface{}{"user_id": "1233"},
-			setupFunc: func() {
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, model.Schema)
-				err := dB.Insert(model.Account{
-					Id: "1233",
-				})
+			dataSet:   map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: "income+100"}},
+			dataWhere: map[string]interface{}{"user_id": "100"},
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err)
+					t.Fail()
 				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectExec(regexp.QuoteMeta("UPDATE newTemp  SET income = income+100 WHERE user_id = '100' ;")).WillReturnError(nil).WillReturnResult(sqlmock.NewResult(1, 1))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
-				if err != nil {
+			validator: func(err error, mock sqlmock.Sqlmock) {
+				if mock.ExpectationsWereMet() != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
 					return
 				}
-				user, err := dB.Get(map[string]interface{}{"user_id": "1233"})
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
-					return
-				}
-				if user[0].Income != 100 {
-					t.Errorf("Want: %v, Got: %v", 1000, user[0].Income)
-				}
-				x := model.Account{InactiveServices: &model.Svc{"1": {}}}
-				if !reflect.DeepEqual(user[0].InactiveServices, x.InactiveServices) {
-					t.Errorf("Want: %v, Got: %v", x.InactiveServices, user[0].ActiveServices)
 					return
 				}
 			},
@@ -605,65 +420,52 @@ func TestUpdate(t *testing.T) {
 			name:      "Success:: Update:: removing and inserting",
 			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"1\"')"}},
 			dataWhere: map[string]interface{}{"user_id": "1233"},
-			setupFunc: func() {
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, model.Schema)
-				err := dB.Insert(model.Account{
-					Id:               "1233",
-					InactiveServices: &model.Svc{"1": {}},
-				})
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err)
+					t.Fail()
 				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectExec(regexp.QuoteMeta("UPDATE newTemp SET active_services = JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT()) , inactive_services = JSON_REMOVE(inactive_services, '$.\"1\"') WHERE user_id = '1233' ;")).WillReturnError(nil).WillReturnResult(sqlmock.NewResult(1, 1))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
-				if err != nil {
+			validator: func(err error, mock sqlmock.Sqlmock) {
+				if mock.ExpectationsWereMet() != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
 					return
 				}
-				user, err := dB.Get(map[string]interface{}{"user_id": "1233"})
 				if err != nil {
 					t.Errorf("Want: %v, Got: %v", nil, err.Error())
 					return
-				}
-				x := model.Account{ActiveServices: &model.Svc{"1": {}}}
-				if user[0].ActiveServices != x.ActiveServices {
-					t.Errorf("Want: %v, Got: %v", x.ActiveServices, user[0].ActiveServices)
-					return
-				}
-				y := &model.Svc{}
-				if user[0].InactiveServices != y {
-					t.Errorf("Want: %v, Got: %v", y, user[0].InactiveServices)
-
 				}
 			},
 		},
 		{
 			name:      "Failure:: Update::",
-			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"1\"')"}},
+			dataSet:   map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT())"}},
 			dataWhere: map[string]interface{}{"abc": "1233"},
-			setupFunc: func() {
-				tableName := "newTemp"
-				createTestTable(t, dataBase, tableName, model.Schema)
-				err := dB.Insert(model.Account{
-					Id:               "1233",
-					InactiveServices: &model.Svc{"1": {}},
-				})
+			setupFunc: func() (sqlDs, sqlmock.Sqlmock) {
+				db, mock, err := sqlmock.New()
 				if err != nil {
-					t.Fatal(err)
+					t.Fail()
 				}
+				dB := sqlDs{
+					sqlSvc: db,
+					table:  "newTemp",
+				}
+				mock.ExpectExec(regexp.QuoteMeta("UPDATE newTemp  SET active_services = JSON_INSERT(active_services, '$.\"1\"', JSON_OBJECT()) WHERE abc = '1233' ;")).WillReturnError(errors.New("unknown column abc")).WillReturnResult(sqlmock.NewResult(1, 1))
+				return dB, mock
 			},
-			cleanupFunc: func() {
-				tableName := "newTemp"
-				deleteTestTable(t, dataBase, tableName)
-			},
-			validator: func(err error) {
-				if err.Error() != errors.New("Error 1054 (42S22): Unknown column 'abc' in 'where clause'").Error() {
-					t.Errorf("Want: %v, Got: %v", "Error 1054 (42S22): Unknown column 'abc' in 'where clause'", err.Error())
+			validator: func(err error, mock sqlmock.Sqlmock) {
+				if mock.ExpectationsWereMet() != nil {
+					t.Errorf("Want: %v, Got: %v", nil, err.Error())
+					return
+				}
+				if err.Error() != errors.New("unknown column abc").Error() {
+					t.Errorf("Want: %v, Got: %v", "unknown column abc", err.Error())
 					return
 				}
 			},
@@ -672,15 +474,13 @@ func TestUpdate(t *testing.T) {
 	// to execute the tests in the table
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupFunc != nil {
-				tt.setupFunc()
-			}
+			db, mock := tt.setupFunc()
 			// STEP 2: call the test function
-			err := dB.Update(tt.dataSet, tt.dataWhere)
+			err := db.Update(tt.dataSet, tt.dataWhere)
 
 			// STEP 3: validation of output
 			if tt.validator != nil {
-				tt.validator(err)
+				tt.validator(err, mock)
 			}
 
 			// STEP 4: clean up/remove up all instances for the specific test case
