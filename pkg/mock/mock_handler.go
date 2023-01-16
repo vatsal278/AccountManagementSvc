@@ -34,6 +34,18 @@ func (m *MockAccountManagmentSvcHandler) EXPECT() *MockAccountManagmentSvcHandle
 	return m.recorder
 }
 
+// AccountSummary mocks base method.
+func (m *MockAccountManagmentSvcHandler) AccountSummary(arg0 http.ResponseWriter, arg1 *http.Request) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AccountSummary", arg0, arg1)
+}
+
+// AccountSummary indicates an expected call of AccountSummary.
+func (mr *MockAccountManagmentSvcHandlerMockRecorder) AccountSummary(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountSummary", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).AccountSummary), arg0, arg1)
+}
+
 // CreateAccount mocks base method.
 func (m *MockAccountManagmentSvcHandler) CreateAccount(arg0 http.ResponseWriter, arg1 *http.Request) {
 	m.ctrl.T.Helper()

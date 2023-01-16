@@ -35,6 +35,20 @@ func (m *MockAccountManagmentSvcLogicIer) EXPECT() *MockAccountManagmentSvcLogic
 	return m.recorder
 }
 
+// AccountDetails mocks base method.
+func (m *MockAccountManagmentSvcLogicIer) AccountDetails(arg0 string) *model.Response {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountDetails", arg0)
+	ret0, _ := ret[0].(*model.Response)
+	return ret0
+}
+
+// AccountDetails indicates an expected call of AccountDetails.
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) AccountDetails(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDetails", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).AccountDetails), arg0)
+}
+
 // CreateAccount mocks base method.
 func (m *MockAccountManagmentSvcLogicIer) CreateAccount(arg0 model0.NewAccount) *model.Response {
 	m.ctrl.T.Helper()

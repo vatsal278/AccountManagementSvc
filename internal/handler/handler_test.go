@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
+	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -190,6 +191,124 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 			w := httptest.NewRecorder()
 			x, r := tt.setup()
 			x.CreateAccount(w, r)
+			tt.want(*w)
+		})
+	}
+}
+
+func TestAccountManagmentSvc_AccountSummary(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name  string
+		model model.Account
+		setup func() (*accountManagmentSvc, *http.Request)
+		want  func(recorder httptest.ResponseRecorder)
+	}{
+		{
+			name: "Success",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				mockLogic.EXPECT().AccountDetails("1234").Times(1).Return(&respModel.Response{
+					Status:  http.StatusOK,
+					Message: codes.GetErr(codes.Success),
+					Data:    model.Account{},
+				})
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("GET", "/account", nil)
+				ctx := session.SetSession(r.Context(), "1234")
+				return svc, r.WithContext(ctx)
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusOK,
+					Message: codes.GetErr(codes.Success),
+					Data:    model.Account{Id: "1234", AccountNumber: 1},
+				}
+				if !reflect.DeepEqual(response.Status, tempResp.Status) {
+					t.Errorf("Want: %v, Got: %v", tempResp.Status, response.Status)
+				}
+				//if !reflect.DeepEqual(response.Data, tempResp.Data) {
+				//	t.Errorf("Want: %v, Got: %v", tempResp.Data, response.Data)
+				//}
+			},
+		},
+		{
+			name: "Failure:: logic :: internal server error",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				mockLogic.EXPECT().AccountDetails("1234").Return(&respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrAssertUserid),
+					Data:    nil,
+				})
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/activate", nil)
+				ctx := session.SetSession(r.Context(), "1234")
+				return svc, r.WithContext(ctx)
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrAssertUserid),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+		{
+			name: "Failure:: err asserting to string",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/activate", nil)
+				ctx := session.SetSession(r.Context(), 1.11)
+				return svc, r.WithContext(ctx)
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: codes.GetErr(codes.ErrAssertUserid),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			x, r := tt.setup()
+			x.AccountSummary(w, r)
 			tt.want(*w)
 		})
 	}

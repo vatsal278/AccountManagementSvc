@@ -185,3 +185,87 @@ func TestAccountManagmentSvcLogic_CreateAccount(t *testing.T) {
 		})
 	}
 }
+func TestAccountManagmentSvcLogic_AccountSummary(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name        string
+		credentials string
+		setup       func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct)
+		want        func(*respModel.Response)
+	}{
+		{
+			name:        "Success :: AccDetails",
+			credentials: "123",
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockJwtSvc := mock.NewMockJWTService(mockCtrl)
+				var acc []model.Account
+				acc = append(acc, model.Account{Id: "123", AccountNumber: 1})
+				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return(acc, nil)
+				return mockDs, mockJwtSvc, config.MsgQueue{}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				var users = model.Account{Id: "123", AccountNumber: 1}
+				temp := respModel.Response{
+					Status:  http.StatusOK,
+					Message: "SUCCESS",
+					Data:    users,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", &temp, resp)
+				}
+			},
+		},
+		{
+			name:        "Failure :: AccDetails :: db err",
+			credentials: "123",
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockJwtSvc := mock.NewMockJWTService(mockCtrl)
+				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return(nil, errors.New(""))
+				return mockDs, mockJwtSvc, config.MsgQueue{}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrFetchingUser),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", &temp, resp)
+				}
+			},
+		},
+		{
+			name:        "Failure :: AccDetails :: db err",
+			credentials: "123",
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockJwtSvc := mock.NewMockJWTService(mockCtrl)
+				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return(nil, nil)
+				return mockDs, mockJwtSvc, config.MsgQueue{}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: codes.GetErr(codes.AccNotFound),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", &temp, resp)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := NewAccountManagmentSvcLogic(tt.setup())
+
+			got := rec.AccountDetails(tt.credentials)
+
+			tt.want(got)
+		})
+	}
+}

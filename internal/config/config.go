@@ -133,10 +133,6 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	if err != nil {
 		panic(err.Error())
 	}
-	cfg.Cookie.Expiry, err = time.ParseDuration(cfg.Cookie.ExpiryStr)
-	if err != nil {
-		panic(err.Error())
-	}
 	return &SvcConfig{
 		Cfg:                 &cfg,
 		ServiceRouteVersion: cfg.ServiceRouteVersion,

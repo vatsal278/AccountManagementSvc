@@ -4,11 +4,13 @@ import (
 	"github.com/PereRohit/util/log"
 	"github.com/PereRohit/util/request"
 	"github.com/PereRohit/util/response"
+	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	"github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/logic"
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	jwtSvc "github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
+	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
 	"net/http"
 )
 
@@ -19,6 +21,7 @@ const AccountManagmentSvcName = "accountManagmentSvc"
 type AccountManagmentSvcHandler interface {
 	HealthChecker
 	CreateAccount(w http.ResponseWriter, r *http.Request)
+	AccountSummary(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
@@ -56,5 +59,16 @@ func (svc accountManagmentSvc) CreateAccount(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	resp := svc.logic.CreateAccount(newAccount)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
+}
+
+func (svc accountManagmentSvc) AccountSummary(w http.ResponseWriter, r *http.Request) {
+	id := session.GetSession(r.Context())
+	idStr, ok := id.(string)
+	if !ok {
+		response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+		return
+	}
+	resp := svc.logic.AccountDetails(idStr)
 	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 }
