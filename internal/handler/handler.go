@@ -22,6 +22,7 @@ type AccountManagmentSvcHandler interface {
 	HealthChecker
 	CreateAccount(w http.ResponseWriter, r *http.Request)
 	AccountSummary(w http.ResponseWriter, r *http.Request)
+	UpdateService(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
@@ -70,5 +71,16 @@ func (svc accountManagmentSvc) AccountSummary(w http.ResponseWriter, r *http.Req
 		return
 	}
 	resp := svc.logic.AccountDetails(idStr)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
+}
+func (svc accountManagmentSvc) UpdateService(w http.ResponseWriter, r *http.Request) {
+	var data model.UpdateServices
+	status, err := request.FromJson(r, &data)
+	if err != nil {
+		log.Error(err)
+		response.ToJson(w, status, err.Error(), nil)
+		return
+	}
+	resp := svc.logic.UpdateServices(data.AccountNumber, data.ServiceId, data.UpdateType)
 	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 }

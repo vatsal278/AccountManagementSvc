@@ -18,6 +18,7 @@ type AccountManagmentSvcLogicIer interface {
 	HealthCheck() bool
 	CreateAccount(account model.NewAccount) *respModel.Response
 	AccountDetails(id string) *respModel.Response
+	UpdateServices(accNo int, svcId string, updateType string) *respModel.Response
 }
 
 type accountManagmentSvcLogic struct {
@@ -112,5 +113,49 @@ func (l accountManagmentSvcLogic) AccountDetails(id string) *respModel.Response 
 		Status:  http.StatusOK,
 		Message: "SUCCESS",
 		Data:    resp,
+	}
+}
+
+func (l accountManagmentSvcLogic) UpdateServices(accNo int, svcId string, updateType string) *respModel.Response {
+	if updateType == "ACTIVATE" {
+		insertQuery := fmt.Sprintf("JSON_INSERT(%s, '$.\"%s\"', JSON_OBJECT())", "active_services", svcId)
+		removeQuery := fmt.Sprintf("JSON_REMOVE(%s, '$.\"%s\"')", "inactive_services", svcId)
+		err := l.DsSvc.Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: insertQuery}, "inactive_services": model.ColumnUpdate{UpdateSet: removeQuery}}, map[string]interface{}{"account_number": accNo})
+		if err != nil {
+			log.Error(err)
+			return &respModel.Response{
+				Status:  http.StatusInternalServerError,
+				Message: codes.GetErr(codes.AccActivationErr),
+				Data:    nil,
+			}
+		}
+	} else if updateType == "DE-ACTIVATE" {
+		insertQuery := fmt.Sprintf("JSON_INSERT(%s, '$.\"%s\"', JSON_OBJECT())", "inactive_services", svcId)
+		removeQuery := fmt.Sprintf("JSON_REMOVE(%s, '$.\"%s\"')", "active_services", svcId)
+		err := l.DsSvc.Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: removeQuery}, "inactive_services": model.ColumnUpdate{UpdateSet: insertQuery}}, map[string]interface{}{"account_number": accNo})
+		if err != nil {
+			log.Error(err)
+			return &respModel.Response{
+				Status:  http.StatusInternalServerError,
+				Message: codes.GetErr(codes.AccActivationErr),
+				Data:    nil,
+			}
+		}
+	} else {
+		insertQuery := fmt.Sprintf("JSON_INSERT(%s, '$.\"%s\"', JSON_OBJECT())", "inactive_services", svcId)
+		err := l.DsSvc.Update(map[string]interface{}{"inactive_services": model.ColumnUpdate{UpdateSet: insertQuery}}, map[string]interface{}{"account_number": accNo})
+		if err != nil {
+			log.Error(err)
+			return &respModel.Response{
+				Status:  http.StatusInternalServerError,
+				Message: codes.GetErr(codes.AccActivationErr),
+				Data:    nil,
+			}
+		}
+	}
+	return &respModel.Response{
+		Status:  http.StatusOK,
+		Message: "SUCCESS",
+		Data:    nil,
 	}
 }

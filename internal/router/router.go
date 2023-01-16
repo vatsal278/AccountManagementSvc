@@ -49,5 +49,9 @@ func attachAccountManagmentSvcRoutes(m *mux.Router, svcCfg *config.SvcConfig) *m
 	route2.HandleFunc("", svc.AccountSummary).Methods(http.MethodGet)
 	route2.Use(middleware.ExtractUser)
 
+	route3 := m.PathPrefix("/account/update/service").Subrouter()
+	route3.HandleFunc("", svc.UpdateService).Methods(http.MethodPut)
+	route3.Use(middleware.ExtractUser)
+
 	return m
 }
