@@ -1,15 +1,17 @@
 package handler
 
 import (
-	"fmt"
-	"net/http"
-
+	"github.com/PereRohit/util/log"
 	"github.com/PereRohit/util/request"
 	"github.com/PereRohit/util/response"
-
+	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
+	"github.com/vatsal278/AccountManagmentSvc/internal/config"
 	"github.com/vatsal278/AccountManagmentSvc/internal/logic"
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
+	jwtSvc "github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
+	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
+	"net/http"
 )
 
 const AccountManagmentSvcName = "accountManagmentSvc"
@@ -18,16 +20,17 @@ const AccountManagmentSvcName = "accountManagmentSvc"
 
 type AccountManagmentSvcHandler interface {
 	HealthChecker
-	Ping(w http.ResponseWriter, r *http.Request)
+	CreateAccount(w http.ResponseWriter, r *http.Request)
+	AccountSummary(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
 	logic logic.AccountManagmentSvcLogicIer
 }
 
-func NewAccountManagmentSvc(ds datasource.DataSource) AccountManagmentSvcHandler {
+func NewAccountManagmentSvc(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct) AccountManagmentSvcHandler {
 	svc := &accountManagmentSvc{
-		logic: logic.NewAccountManagmentSvcLogic(ds),
+		logic: logic.NewAccountManagmentSvcLogic(ds, jwtService, msgQueue, cookie),
 	}
 	AddHealthChecker(svc)
 	return svc
@@ -47,16 +50,25 @@ func (svc accountManagmentSvc) HealthCheck() (svcName string, msg string, stat b
 	return
 }
 
-func (svc accountManagmentSvc) Ping(w http.ResponseWriter, r *http.Request) {
-	req := &model.PingRequest{}
-
-	suggestedCode, err := request.FromJson(r, req)
+func (svc accountManagmentSvc) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	var newAccount model.NewAccount
+	status, err := request.FromJson(r, &newAccount)
 	if err != nil {
-		response.ToJson(w, suggestedCode, fmt.Sprintf("FAILED: %s", err.Error()), nil)
+		log.Error(err)
+		response.ToJson(w, status, err.Error(), nil)
 		return
 	}
-	// call logic
-	resp := svc.logic.Ping(req)
+	resp := svc.logic.CreateAccount(newAccount)
 	response.ToJson(w, resp.Status, resp.Message, resp.Data)
-	return
+}
+
+func (svc accountManagmentSvc) AccountSummary(w http.ResponseWriter, r *http.Request) {
+	id := session.GetSession(r.Context())
+	idStr, ok := id.(string)
+	if !ok {
+		response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+		return
+	}
+	resp := svc.logic.AccountDetails(idStr)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 }

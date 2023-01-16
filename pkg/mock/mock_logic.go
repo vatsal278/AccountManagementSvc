@@ -35,6 +35,34 @@ func (m *MockAccountManagmentSvcLogicIer) EXPECT() *MockAccountManagmentSvcLogic
 	return m.recorder
 }
 
+// AccountDetails mocks base method.
+func (m *MockAccountManagmentSvcLogicIer) AccountDetails(arg0 string) *model.Response {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountDetails", arg0)
+	ret0, _ := ret[0].(*model.Response)
+	return ret0
+}
+
+// AccountDetails indicates an expected call of AccountDetails.
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) AccountDetails(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDetails", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).AccountDetails), arg0)
+}
+
+// CreateAccount mocks base method.
+func (m *MockAccountManagmentSvcLogicIer) CreateAccount(arg0 model0.NewAccount) *model.Response {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccount", arg0)
+	ret0, _ := ret[0].(*model.Response)
+	return ret0
+}
+
+// CreateAccount indicates an expected call of CreateAccount.
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) CreateAccount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).CreateAccount), arg0)
+}
+
 // HealthCheck mocks base method.
 func (m *MockAccountManagmentSvcLogicIer) HealthCheck() bool {
 	m.ctrl.T.Helper()
@@ -47,18 +75,4 @@ func (m *MockAccountManagmentSvcLogicIer) HealthCheck() bool {
 func (mr *MockAccountManagmentSvcLogicIerMockRecorder) HealthCheck() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).HealthCheck))
-}
-
-// Ping mocks base method.
-func (m *MockAccountManagmentSvcLogicIer) Ping(arg0 *model0.PingRequest) *model.Response {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ping", arg0)
-	ret0, _ := ret[0].(*model.Response)
-	return ret0
-}
-
-// Ping indicates an expected call of Ping.
-func (mr *MockAccountManagmentSvcLogicIerMockRecorder) Ping(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).Ping), arg0)
 }
