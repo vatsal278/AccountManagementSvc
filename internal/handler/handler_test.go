@@ -213,7 +213,7 @@ func TestAccountManagmentSvc_AccountSummary(t *testing.T) {
 				mockLogic.EXPECT().AccountDetails("1234").Times(1).Return(&respModel.Response{
 					Status:  http.StatusOK,
 					Message: codes.GetErr(codes.Success),
-					Data:    model.Account{},
+					Data:    model.AccountSummary{},
 				})
 				svc := &accountManagmentSvc{
 					logic: mockLogic,
@@ -232,7 +232,7 @@ func TestAccountManagmentSvc_AccountSummary(t *testing.T) {
 				tempResp := &respModel.Response{
 					Status:  http.StatusOK,
 					Message: codes.GetErr(codes.Success),
-					Data:    model.Account{Id: "1234", AccountNumber: 1},
+					Data:    model.AccountSummary{AccountNumber: 1},
 				}
 				if !reflect.DeepEqual(response.Status, tempResp.Status) {
 					t.Errorf("Want: %v, Got: %v", tempResp.Status, response.Status)
