@@ -96,7 +96,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().CreateAccount(gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().CreateAccount(model.NewAccount{UserId: "123"}).Times(1).Return(&respModel.Response{
 					Status:  http.StatusCreated,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -110,7 +110,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 				if err != nil {
 					t.Fail()
 				}
-				r := httptest.NewRequest("POST", "/new_account", bytes.NewBuffer(by))
+				r := httptest.NewRequest("POST", "/account", bytes.NewBuffer(by))
 				return svc, r
 			},
 			want: func(rec httptest.ResponseRecorder) {
@@ -330,7 +330,7 @@ func TestAccountManagmentSvc_UpdateService(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().UpdateServices(gomock.Any(), gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().UpdateServices("1234", model.UpdateServices{AccountNumber: 1, ServiceId: "1", UpdateType: "add"}).Times(1).Return(&respModel.Response{
 					Status:  http.StatusAccepted,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -488,7 +488,7 @@ func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().UpdateTransaction(gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().UpdateTransaction(model.UpdateTransaction{AccountNumber: 1, Amount: "1000", TransactionType: "debit"}).Times(1).Return(&respModel.Response{
 					Status:  http.StatusAccepted,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
