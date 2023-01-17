@@ -269,3 +269,275 @@ func TestAccountManagmentSvcLogic_AccountSummary(t *testing.T) {
 		})
 	}
 }
+func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name        string
+		credentials model.UpdateServices
+		setup       func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct)
+		want        func(*respModel.Response)
+	}{
+		{
+			name: "Success",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "ACTIVATE",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"10\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"10\"')"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: "SUCCESS",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Success :: DEACTIVATE",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "DE-ACTIVATE",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(active_services, '$.\"10\"')"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(inactive_services, '$.\"10\"', JSON_OBJECT())"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: "SUCCESS",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Success :: ADD-NEW",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "ADD-NEW",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: "SUCCESS",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Failure::DB ERR",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "ACTIVATE",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrUpdatingServices),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Failure::DB ERR::DeActivate",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "DE-ACTIVATE",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrUpdatingServices),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Failure::DB ERR::newSvc",
+			credentials: model.UpdateServices{
+				AccountNumber: 1,
+				ServiceId:     "10",
+				UpdateType:    "ADD-NEW",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrUpdatingServices),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := NewAccountManagmentSvcLogic(tt.setup())
+
+			got := rec.UpdateServices(tt.credentials.AccountNumber, tt.credentials.ServiceId, tt.credentials.UpdateType)
+
+			tt.want(got)
+		})
+	}
+}
+func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name        string
+		credentials model.UpdateTransaction
+		setup       func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct)
+		want        func(*respModel.Response)
+	}{
+		{
+			name: "Success::DEBIT",
+			credentials: model.UpdateTransaction{
+				AccountNumber:   1,
+				Amount:          "1000",
+				TransactionType: "DEBIT",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(map[string]interface{}{"spends": model.ColumnUpdate{UpdateSet: "spends + 1000"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: "SUCCESS",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Success :: CREDIT",
+			credentials: model.UpdateTransaction{
+				AccountNumber:   1,
+				Amount:          "1000",
+				TransactionType: "CREDIT",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: "income + 1000"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: "SUCCESS",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Failure::DB ERR::DEBIT",
+			credentials: model.UpdateTransaction{
+				AccountNumber:   1,
+				Amount:          "1000",
+				TransactionType: "DEBIT",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrUpdatingTransaction),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+		{
+			name: "Failure::DB ERR::CREDIT",
+			credentials: model.UpdateTransaction{
+				AccountNumber:   1,
+				Amount:          "1000",
+				TransactionType: "DEBIT",
+			},
+			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
+				mockDs := mock.NewMockDataSourceI(mockCtrl)
+				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
+				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
+			},
+			want: func(resp *respModel.Response) {
+				temp := respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: codes.GetErr(codes.ErrUpdatingTransaction),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(resp, &temp) {
+					t.Errorf("Want: %v, Got: %v", temp, resp)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := NewAccountManagmentSvcLogic(tt.setup())
+
+			got := rec.UpdateTransaction(tt.credentials.AccountNumber, tt.credentials.Amount, tt.credentials.TransactionType)
+
+			tt.want(got)
+		})
+	}
+}

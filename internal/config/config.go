@@ -72,20 +72,18 @@ type CookieStruct struct {
 
 func Connect(cfg DbCfg, tableName string) *sql.DB {
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True", cfg.User, cfg.Pass, cfg.Host, cfg.Port)
-	db, err := sql.Open("mysql", connectionString)
+	db, err := sql.Open(cfg.Driver, connectionString)
 	if err != nil {
 		panic(err.Error())
 	}
 	dbString := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s ;", cfg.DbName)
 	prepare, err := db.Prepare(dbString)
 	if err != nil {
-		log.Print(err)
-		return nil
+		log.Fatal(err)
 	}
 	_, err = prepare.Exec()
 	if err != nil {
-		log.Print(err)
-		return nil
+		log.Fatal(err)
 	}
 	db.Close()
 	connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True", cfg.User, cfg.Pass, cfg.Host, cfg.Port, cfg.DbName)

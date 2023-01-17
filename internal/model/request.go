@@ -15,3 +15,8 @@ type UpdateServices struct {
 	ServiceId     string `json:"service_id" validate:"required"`
 	UpdateType    string `json:"update_type" validate:"required"`
 }
+type UpdateTransaction struct {
+	AccountNumber   int    `json:"account_number" validate:"required"`
+	Amount          string `json:"amount" validate:"required"`
+	TransactionType string `json:"transaction_type" validate:"required"`
+}

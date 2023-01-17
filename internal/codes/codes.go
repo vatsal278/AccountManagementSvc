@@ -45,6 +45,8 @@ const (
 	ErrPassRegex
 	ErrExtractMsg
 	ErrAccExists
+	ErrUpdatingTransaction
+	ErrUpdatingServices
 )
 
 var errCodes = map[errCode]string{
@@ -86,6 +88,8 @@ var errCodes = map[errCode]string{
 	ErrPassSpecial:         "password must contain 1 special character",
 	ErrExtractMsg:          "unable to extract msg",
 	ErrAccExists:           "account already exists",
+	ErrUpdatingTransaction: "error updating transaction details",
+	ErrUpdatingServices:    "error updating services",
 }
 
 func GetErr(code errCode) string {
