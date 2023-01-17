@@ -1,5 +1,5 @@
 {
-  "service_route_version": "microbank/v1/accounts",
+  "service_route_version": "microbank/v1/account",
   "server_config": {
     "host": "",
     "port": "9080",
