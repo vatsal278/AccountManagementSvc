@@ -78,29 +78,29 @@ func (mr *MockAccountManagmentSvcLogicIerMockRecorder) HealthCheck() *gomock.Cal
 }
 
 // UpdateServices mocks base method.
-func (m *MockAccountManagmentSvcLogicIer) UpdateServices(arg0 int, arg1, arg2 string) *model.Response {
+func (m *MockAccountManagmentSvcLogicIer) UpdateServices(arg0 string, arg1 model0.UpdateServices) *model.Response {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateServices", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateServices", arg0, arg1)
 	ret0, _ := ret[0].(*model.Response)
 	return ret0
 }
 
 // UpdateServices indicates an expected call of UpdateServices.
-func (mr *MockAccountManagmentSvcLogicIerMockRecorder) UpdateServices(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) UpdateServices(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateServices", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).UpdateServices), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateServices", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).UpdateServices), arg0, arg1)
 }
 
 // UpdateTransaction mocks base method.
-func (m *MockAccountManagmentSvcLogicIer) UpdateTransaction(arg0 int, arg1, arg2 string) *model.Response {
+func (m *MockAccountManagmentSvcLogicIer) UpdateTransaction(arg0 model0.UpdateTransaction) *model.Response {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateTransaction", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateTransaction", arg0)
 	ret0, _ := ret[0].(*model.Response)
 	return ret0
 }
 
 // UpdateTransaction indicates an expected call of UpdateTransaction.
-func (mr *MockAccountManagmentSvcLogicIerMockRecorder) UpdateTransaction(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockAccountManagmentSvcLogicIerMockRecorder) UpdateTransaction(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransaction", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).UpdateTransaction), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransaction", reflect.TypeOf((*MockAccountManagmentSvcLogicIer)(nil).UpdateTransaction), arg0)
 }

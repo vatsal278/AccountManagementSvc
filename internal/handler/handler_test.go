@@ -330,7 +330,7 @@ func TestAccountManagmentSvc_UpdateService(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().UpdateServices(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().UpdateServices(gomock.Any(), gomock.Any()).Times(1).Return(&respModel.Response{
 					Status:  http.StatusAccepted,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -341,13 +341,14 @@ func TestAccountManagmentSvc_UpdateService(t *testing.T) {
 				by, err := json.Marshal(model.UpdateServices{
 					AccountNumber: 1,
 					ServiceId:     "1",
-					UpdateType:    "ACTIVATE",
+					UpdateType:    "add",
 				})
 				if err != nil {
 					t.Fail()
 				}
 				r := httptest.NewRequest("PUT", "/account/update/service", bytes.NewBuffer(by))
-				return svc, r
+				ctx := session.SetSession(r.Context(), "1234")
+				return svc, r.WithContext(ctx)
 			},
 			want: func(rec httptest.ResponseRecorder) {
 				b, err := ioutil.ReadAll(rec.Body)
@@ -421,6 +422,45 @@ func TestAccountManagmentSvc_UpdateService(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Failure::err assert user_id",
+			model: model.NewAccount{
+				UserId: "123",
+			},
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				by, err := json.Marshal(model.UpdateServices{
+					AccountNumber: 1,
+					ServiceId:     "1",
+					UpdateType:    "add",
+				})
+				if err != nil {
+					t.Fail()
+				}
+				r := httptest.NewRequest("PUT", "/account/update/service", bytes.NewBuffer(by))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: codes.GetErr(codes.ErrAssertUserid),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -448,7 +488,7 @@ func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().UpdateTransaction(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().UpdateTransaction(gomock.Any()).Times(1).Return(&respModel.Response{
 					Status:  http.StatusAccepted,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -459,7 +499,7 @@ func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
 				by, err := json.Marshal(model.UpdateTransaction{
 					AccountNumber:   1,
 					Amount:          "1000",
-					TransactionType: "DEBIT",
+					TransactionType: "debit",
 				})
 				if err != nil {
 					t.Fail()

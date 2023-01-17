@@ -165,7 +165,7 @@ func (l accountManagmentSvcLogic) UpdateTransaction(transaction model.UpdateTran
 		log.Error(errors.New("incorrect transaction type "))
 		return &respModel.Response{
 			Status:  http.StatusBadRequest,
-			Message: codes.GetErr(codes.ErrUpdatingServices),
+			Message: codes.GetErr(codes.ErrUpdatingTransaction),
 			Data:    nil,
 		}
 	}

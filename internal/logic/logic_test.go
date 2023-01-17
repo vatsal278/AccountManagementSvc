@@ -284,11 +284,11 @@ func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
 			credentials: model.UpdateServices{
 				AccountNumber: 1,
 				ServiceId:     "10",
-				UpdateType:    "ACTIVATE",
+				UpdateType:    "add",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"10\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"10\"')"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(active_services, '$.\"10\"', JSON_OBJECT())"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(inactive_services, '$.\"10\"')"}}, map[string]interface{}{"account_number": 1, "user_id": "1234"}).Times(1).Return(nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -303,38 +303,15 @@ func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "Success :: DEACTIVATE",
+			name: "Success :: remove",
 			credentials: model.UpdateServices{
 				AccountNumber: 1,
 				ServiceId:     "10",
-				UpdateType:    "DE-ACTIVATE",
+				UpdateType:    "remove",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(active_services, '$.\"10\"')"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(inactive_services, '$.\"10\"', JSON_OBJECT())"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
-				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
-			},
-			want: func(resp *respModel.Response) {
-				temp := respModel.Response{
-					Status:  http.StatusAccepted,
-					Message: "SUCCESS",
-					Data:    nil,
-				}
-				if !reflect.DeepEqual(resp, &temp) {
-					t.Errorf("Want: %v, Got: %v", temp, resp)
-				}
-			},
-		},
-		{
-			name: "Success :: ADD-NEW",
-			credentials: model.UpdateServices{
-				AccountNumber: 1,
-				ServiceId:     "10",
-				UpdateType:    "ADD-NEW",
-			},
-			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
-				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+				mockDs.EXPECT().Update(map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: "JSON_REMOVE(active_services, '$.\"10\"')"}, "inactive_services": model.ColumnUpdate{UpdateSet: "JSON_INSERT(inactive_services, '$.\"10\"', JSON_OBJECT())"}}, map[string]interface{}{"account_number": 1, "user_id": "1234"}).Times(1).Return(nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -353,7 +330,7 @@ func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
 			credentials: model.UpdateServices{
 				AccountNumber: 1,
 				ServiceId:     "10",
-				UpdateType:    "ACTIVATE",
+				UpdateType:    "add",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
@@ -372,43 +349,19 @@ func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure::DB ERR::DeActivate",
+			name: "Failure::switch default case",
 			credentials: model.UpdateServices{
 				AccountNumber: 1,
 				ServiceId:     "10",
-				UpdateType:    "DE-ACTIVATE",
+				UpdateType:    "",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
 				temp := respModel.Response{
-					Status:  http.StatusInternalServerError,
-					Message: codes.GetErr(codes.ErrUpdatingServices),
-					Data:    nil,
-				}
-				if !reflect.DeepEqual(resp, &temp) {
-					t.Errorf("Want: %v, Got: %v", temp, resp)
-				}
-			},
-		},
-		{
-			name: "Failure::DB ERR::newSvc",
-			credentials: model.UpdateServices{
-				AccountNumber: 1,
-				ServiceId:     "10",
-				UpdateType:    "ADD-NEW",
-			},
-			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
-				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
-				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
-			},
-			want: func(resp *respModel.Response) {
-				temp := respModel.Response{
-					Status:  http.StatusInternalServerError,
+					Status:  http.StatusBadRequest,
 					Message: codes.GetErr(codes.ErrUpdatingServices),
 					Data:    nil,
 				}
@@ -422,7 +375,7 @@ func TestAccountManagmentSvcLogic_UpdateServices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := NewAccountManagmentSvcLogic(tt.setup())
 
-			got := rec.UpdateServices(tt.credentials.AccountNumber, tt.credentials.ServiceId, tt.credentials.UpdateType)
+			got := rec.UpdateServices("1234", tt.credentials)
 
 			tt.want(got)
 		})
@@ -443,7 +396,7 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
 				Amount:          "1000",
-				TransactionType: "DEBIT",
+				TransactionType: "debit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
@@ -466,7 +419,7 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
 				Amount:          "1000",
-				TransactionType: "CREDIT",
+				TransactionType: "credit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
@@ -485,11 +438,11 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure::DB ERR::DEBIT",
+			name: "Failure::DB ERR",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
 				Amount:          "1000",
-				TransactionType: "DEBIT",
+				TransactionType: "debit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
@@ -508,20 +461,19 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure::DB ERR::CREDIT",
+			name: "Failure::default switch case",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
 				Amount:          "1000",
-				TransactionType: "DEBIT",
+				TransactionType: "",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(errors.New("DB ERR"))
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
 				temp := respModel.Response{
-					Status:  http.StatusInternalServerError,
+					Status:  http.StatusBadRequest,
 					Message: codes.GetErr(codes.ErrUpdatingTransaction),
 					Data:    nil,
 				}
@@ -535,7 +487,7 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := NewAccountManagmentSvcLogic(tt.setup())
 
-			got := rec.UpdateTransaction(tt.credentials.AccountNumber, tt.credentials.Amount, tt.credentials.TransactionType)
+			got := rec.UpdateTransaction(tt.credentials)
 
 			tt.want(got)
 		})
