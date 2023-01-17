@@ -78,7 +78,6 @@ func (l accountManagmentSvcLogic) CreateAccount(account model.NewAccount) *respM
 			log.Error(err)
 			return
 		}
-		return
 	}(account.UserId, l.msgQueue.PubId, l.msgQueue.Channel)
 	return &respModel.Response{
 		Status:  http.StatusCreated,

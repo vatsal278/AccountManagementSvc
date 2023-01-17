@@ -94,7 +94,7 @@ func TestAccountManagmentSvcLogic_CreateAccount(t *testing.T) {
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
 				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return([]model.Account{}, nil)
-				mockDs.EXPECT().Insert(gomock.Any()).Times(1).Return(nil)
+				mockDs.EXPECT().Insert(model.Account{Id: "123"}).Times(1).Return(nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -115,7 +115,7 @@ func TestAccountManagmentSvcLogic_CreateAccount(t *testing.T) {
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Get(gomock.Any()).Times(1).Return(nil, errors.New(""))
+				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return(nil, errors.New(""))
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9091")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -138,7 +138,7 @@ func TestAccountManagmentSvcLogic_CreateAccount(t *testing.T) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
 				var users []model.Account
 				users = append(users, model.Account{Id: "123"})
-				mockDs.EXPECT().Get(gomock.Any()).Times(1).Return(users, nil)
+				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return(users, nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9091")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -160,7 +160,7 @@ func TestAccountManagmentSvcLogic_CreateAccount(t *testing.T) {
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
 				mockDs.EXPECT().Get(map[string]interface{}{"user_id": "123"}).Times(1).Return([]model.Account{}, nil)
-				mockDs.EXPECT().Insert(gomock.Any()).Times(1).Return(errors.New(""))
+				mockDs.EXPECT().Insert(model.Account{Id: "123"}).Times(1).Return(errors.New(""))
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9091")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -207,7 +207,7 @@ func TestAccountManagmentSvcLogic_AccountSummary(t *testing.T) {
 				return mockDs, mockJwtSvc, config.MsgQueue{}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
-				var users = model.Account{Id: "123", AccountNumber: 1}
+				var users = model.AccountSummary{AccountNumber: 1}
 				temp := respModel.Response{
 					Status:  http.StatusOK,
 					Message: "SUCCESS",
