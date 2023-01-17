@@ -77,9 +77,10 @@ func Connect(cfg DbCfg, tableName string) *sql.DB {
 		panic(err.Error())
 	}
 	dbString := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s ;", cfg.DbName)
+	log.Print(dbString)
 	prepare, err := db.Prepare(dbString)
 	if err != nil {
-		log.Print(err)
+		log.Fatal(err)
 		return nil
 	}
 	_, err = prepare.Exec()
