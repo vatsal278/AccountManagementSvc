@@ -2,13 +2,16 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/PereRohit/util/log"
 	"github.com/PereRohit/util/response"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	svcCfg "github.com/vatsal278/AccountManagmentSvc/internal/config"
+	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
+	"github.com/vatsal278/go-redis-cache"
 	"github.com/vatsal278/msgbroker/pkg/sdk"
 	"io"
 	"net/http"
@@ -16,18 +19,36 @@ import (
 )
 
 type AccMgmtMiddleware struct {
-	cfg *svcCfg.Config
-	jwt authentication.JWTService
-	msg func(io.ReadCloser) (string, error)
+	cfg    *svcCfg.Config
+	jwt    authentication.JWTService
+	msg    func(io.ReadCloser) (string, error)
+	cacher redis.Cacher
+}
+
+type respWriterWithStatus struct {
+	status   int
+	response string
+	http.ResponseWriter
+}
+
+func (w *respWriterWithStatus) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *respWriterWithStatus) Write(d []byte) (int, error) {
+	w.response = string(d)
+	return w.ResponseWriter.Write(d)
 }
 
 func NewAccMgmtMiddleware(cfg *svcCfg.SvcConfig) *AccMgmtMiddleware {
 	msgQueue := sdk.NewMsgBrokerSvc(cfg.Cfg.MessageQueue.SvcUrl)
 	msg := msgQueue.ExtractMsg(&cfg.MsgBrokerSvc.PrivateKey)
 	return &AccMgmtMiddleware{
-		cfg: cfg.Cfg,
-		jwt: cfg.JwtSvc.JwtSvc,
-		msg: msg,
+		cfg:    cfg.Cfg,
+		jwt:    cfg.JwtSvc.JwtSvc,
+		msg:    msg,
+		cacher: cfg.Cacher.Cacher,
 	}
 }
 
@@ -102,5 +123,30 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 		}
 		r.Body = io.NopCloser(bytes.NewBuffer([]byte(decryptMsg)))
 		next.ServeHTTP(w, r)
+	})
+}
+func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := session.GetSession(r.Context())
+		idStr, ok := id.(string)
+		if !ok {
+			response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+			return
+		}
+		Cacher := u.cacher
+		by, err := Cacher.Get("accounts/summary/user_id/" + idStr)
+		if err != nil {
+			log.Error()
+			next.ServeHTTP(w, r)
+			return
+		}
+		var summary model.AccountSummary
+		err = json.Unmarshal(by, &summary)
+		if err != nil {
+			log.Error()
+			next.ServeHTTP(w, r)
+			return
+		}
+		response.ToJson(w, http.StatusOK, "SUCCESS", summary)
 	})
 }

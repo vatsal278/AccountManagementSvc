@@ -47,6 +47,7 @@ const (
 	ErrAccExists
 	ErrUpdatingTransaction
 	ErrUpdatingServices
+	ErrRedis
 )
 
 var errCodes = map[errCode]string{
@@ -90,6 +91,7 @@ var errCodes = map[errCode]string{
 	ErrAccExists:           "account already exists",
 	ErrUpdatingTransaction: "error updating transaction details",
 	ErrUpdatingServices:    "error updating services",
+	ErrRedis:               "error saving cache in redis",
 }
 
 func GetErr(code errCode) string {

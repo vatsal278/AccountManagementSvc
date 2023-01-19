@@ -8,9 +8,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
+	"github.com/vatsal278/go-redis-cache"
 	"github.com/vatsal278/msgbroker/pkg/crypt"
 	"github.com/vatsal278/msgbroker/pkg/sdk"
-	"log"
 	"time"
 )
 
@@ -22,6 +22,7 @@ type Config struct {
 	MessageQueue MsgQueueCfg  `json:"msg_queue"`
 	SecretKey    string       `json:"secret_key"`
 	Cookie       CookieStruct `json:"cookie"`
+	Cache        CacheCfg     `json:"cache"`
 }
 
 type SvcConfig struct {
@@ -32,6 +33,7 @@ type SvcConfig struct {
 	DbSvc        DbSvc
 	JwtSvc       JWTSvc
 	MsgBrokerSvc MsgQueue
+	Cacher       CacherSvc
 }
 type DbSvc struct {
 	Db *sql.DB
@@ -69,6 +71,13 @@ type CookieStruct struct {
 	ExpiryStr string        `json:"expiry"`
 	Path      string        `json:"path"`
 }
+type CacheCfg struct {
+	Port string `json:"port"`
+	Host string `json:"host"`
+}
+type CacherSvc struct {
+	Cacher redis.Cacher
+}
 
 func Connect(cfg DbCfg, tableName string) *sql.DB {
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True", cfg.User, cfg.Pass, cfg.Host, cfg.Port)
@@ -77,16 +86,13 @@ func Connect(cfg DbCfg, tableName string) *sql.DB {
 		panic(err.Error())
 	}
 	dbString := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s ;", cfg.DbName)
-	log.Print(dbString)
 	prepare, err := db.Prepare(dbString)
 	if err != nil {
-		log.Fatal(err)
-		return nil
+		panic(err.Error())
 	}
 	_, err = prepare.Exec()
 	if err != nil {
-		log.Print(err)
-		return nil
+		panic(err.Error())
 	}
 	db.Close()
 	connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True", cfg.User, cfg.Pass, cfg.Host, cfg.Port, cfg.DbName)
@@ -97,7 +103,7 @@ func Connect(cfg DbCfg, tableName string) *sql.DB {
 	x := fmt.Sprintf("create table if not exists %s", tableName)
 	_, err = db.Exec(x + model.Schema)
 	if err != nil {
-		log.Fatal(err.Error())
+		panic(err.Error())
 	}
 	return db
 }
@@ -134,6 +140,7 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	if err != nil {
 		panic(err.Error())
 	}
+	cacher := redis.NewCacher(redis.Config{Addr: cfg.Cache.Host + ":" + cfg.Cache.Port})
 	return &SvcConfig{
 		Cfg:                 &cfg,
 		ServiceRouteVersion: cfg.ServiceRouteVersion,
@@ -141,5 +148,6 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 		DbSvc:               DbSvc{Db: dataBase},
 		JwtSvc:              JWTSvc{JwtSvc: jwtSvc},
 		MsgBrokerSvc:        MsgQueue{MsgBroker: msgBrokerSvc, PubId: id, Channel: cfg.MessageQueue.ActivatedAccountChannel, PrivateKey: *privateKey},
+		Cacher:              CacherSvc{Cacher: cacher},
 	}
 }
