@@ -135,7 +135,7 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 	if urlPort == "" {
 		urlPort = "9080"
 	}
-	url := urlHost + ":" + urlPort + "/" + cfg.ServiceRouteVersion + "/new_account"
+	url := urlHost + ":" + urlPort + "/" + cfg.ServiceRouteVersion + "/account"
 	err = msgBrokerSvc.RegisterSub("POST", url, pubKey, cfg.MessageQueue.NewAccountChannel)
 	if err != nil {
 		panic(err.Error())

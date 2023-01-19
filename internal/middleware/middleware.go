@@ -2,13 +2,11 @@ package middleware
 
 import (
 	"bytes"
-	"encoding/json"
 	"github.com/PereRohit/util/log"
 	"github.com/PereRohit/util/response"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	svcCfg "github.com/vatsal278/AccountManagmentSvc/internal/config"
-	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
 	"github.com/vatsal278/go-redis-cache"
@@ -99,6 +97,7 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var urlMatch bool
 		if r.UserAgent() != u.cfg.MessageQueue.UserAgent {
+			log.Error(r.UserAgent())
 			log.Error(codes.GetErr(codes.ErrUnauthorizedAgent))
 			response.ToJson(w, http.StatusUnauthorized, codes.GetErr(codes.ErrUnauthorizedAgent), nil)
 			return
@@ -125,6 +124,7 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := session.GetSession(r.Context())
@@ -134,19 +134,19 @@ func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
 			return
 		}
 		Cacher := u.cacher
-		by, err := Cacher.Get("accounts/summary/user_id/" + idStr)
-		if err != nil {
-			log.Error()
-			next.ServeHTTP(w, r)
+		by, err := Cacher.Get(r.RemoteAddr + r.URL.String() + idStr)
+		if err != nil || len(by) == 0 {
+			hijackedWriter := &respWriterWithStatus{-1, "", w}
+			next.ServeHTTP(hijackedWriter, r)
+			if hijackedWriter.status >= 200 && hijackedWriter.status < 300 {
+				err = Cacher.Set(r.RemoteAddr+r.URL.String()+idStr, hijackedWriter.response, 0)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+			}
 			return
 		}
-		var summary model.AccountSummary
-		err = json.Unmarshal(by, &summary)
-		if err != nil {
-			log.Error()
-			next.ServeHTTP(w, r)
-			return
-		}
-		response.ToJson(w, http.StatusOK, "SUCCESS", summary)
+		w.Write(by)
 	})
 }
