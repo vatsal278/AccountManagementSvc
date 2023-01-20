@@ -72,8 +72,9 @@ type CookieStruct struct {
 	Path      string        `json:"path"`
 }
 type CacheCfg struct {
-	Port string `json:"port"`
-	Host string `json:"host"`
+	Port     string `json:"port"`
+	Host     string `json:"host"`
+	Duration string `json:"duration"`
 }
 type CacherSvc struct {
 	Cacher redis.Cacher

@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type AccMgmtMiddleware struct {
@@ -128,32 +129,33 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 	})
 }
 
-func (u AccMgmtMiddleware) Cacher(urlCheck bool) func(http.Handler) http.Handler {
+func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var key string
-			key = fmt.Sprint(r.URL.String() + "/auth/")
-			if urlCheck != false {
+
+			key = fmt.Sprint(r.URL.String())
+			if requireAuth != false {
 				id := session.GetSession(r.Context())
 				idStr, ok := id.(string)
 				if !ok {
 					response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
 					return
 				}
-				key = fmt.Sprint(key + idStr)
+				key = fmt.Sprint(key + "/auth/" + idStr)
 			}
-			var response model.CacheResponse
+			var cacheResponse model.CacheResponse
 			Cacher := u.cacher
 			by, err := Cacher.Get(key)
 			if err == nil {
-				err = json.Unmarshal(by, &response)
+				err = json.Unmarshal(by, &cacheResponse)
 				if err != nil {
 					log.Error(err)
 					return
 				}
-				w.Write([]byte(response.Response))
-				w.WriteHeader(response.Status)
-				w.Header().Set("Content-Type", response.ContentType)
+				w.Write([]byte(cacheResponse.Response))
+				w.WriteHeader(cacheResponse.Status)
+				w.Header().Set("Content-Type", cacheResponse.ContentType)
 				return
 			}
 			hijackedWriter := &respWriterWithStatus{-1, "", w}
@@ -161,12 +163,17 @@ func (u AccMgmtMiddleware) Cacher(urlCheck bool) func(http.Handler) http.Handler
 			if hijackedWriter.status < 200 && hijackedWriter.status >= 300 {
 				return
 			}
-			response = model.CacheResponse{
+			cacheResponse = model.CacheResponse{
 				Status:      hijackedWriter.status,
 				Response:    hijackedWriter.response,
 				ContentType: w.Header().Get("Content-Type"),
 			}
-			err = Cacher.Set(key, response, 0)
+			duration, err := time.ParseDuration(u.cfg.Cache.Duration)
+			if err != nil {
+				log.Error()
+				return
+			}
+			err = Cacher.Set(key, cacheResponse, duration)
 			if err != nil {
 				log.Error(err)
 				return
@@ -174,46 +181,3 @@ func (u AccMgmtMiddleware) Cacher(urlCheck bool) func(http.Handler) http.Handler
 		})
 	}
 }
-
-//func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		id := session.GetSession(r.Context())
-//		idStr, ok := id.(string)
-//		if !ok {
-//			response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
-//			return
-//		}
-//		//flag to fetch uuid or not
-//		//take the respoinse into struct from redis ...
-//		//9+url/token/id ...
-//		var response model.CacheResponse
-//		Cacher := u.cacher
-//		by, err := Cacher.Get(r.URL.String() + "/user_id/" + idStr)
-//		if err == nil {
-//			err = json.Unmarshal(by, &response)
-//			if err != nil {
-//				log.Error(err)
-//				return
-//			}
-//			w.Write([]byte(response.Response))
-//			w.WriteHeader(response.Status)
-//			w.Header().Set("Content-Type", response.ContentType)
-//			return
-//		}
-//		hijackedWriter := &respWriterWithStatus{-1, "", w}
-//		next.ServeHTTP(hijackedWriter, r)
-//		if hijackedWriter.status < 200 && hijackedWriter.status >= 300 {
-//			return
-//		}
-//		response = model.CacheResponse{
-//			Status:      hijackedWriter.status,
-//			Response:    hijackedWriter.response,
-//			ContentType: w.Header().Get("Content-Type"),
-//		}
-//		err = Cacher.Set(r.URL.String()+"/user_id/"+idStr, response, 0)
-//		if err != nil {
-//			log.Error(err)
-//			return
-//		}
-//	})
-//}
