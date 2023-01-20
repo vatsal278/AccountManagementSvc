@@ -10,7 +10,6 @@ import (
 	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	jwtSvc "github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
-	"github.com/vatsal278/go-redis-cache"
 	"net/http"
 )
 
@@ -29,16 +28,14 @@ type accountManagmentSvcLogic struct {
 	jwtService jwtSvc.JWTService
 	msgQueue   config.MsgQueue
 	cookie     config.CookieStruct
-	redis      redis.Cacher
 }
 
-func NewAccountManagmentSvcLogic(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct, redis redis.Cacher) AccountManagmentSvcLogicIer {
+func NewAccountManagmentSvcLogic(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct) AccountManagmentSvcLogicIer {
 	return &accountManagmentSvcLogic{
 		DsSvc:      ds,
 		jwtService: jwtService,
 		msgQueue:   msgQueue,
 		cookie:     cookie,
-		redis:      redis,
 	}
 }
 

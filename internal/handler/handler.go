@@ -11,7 +11,6 @@ import (
 	jwtSvc "github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/datasource"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
-	"github.com/vatsal278/go-redis-cache"
 	"net/http"
 )
 
@@ -31,9 +30,9 @@ type accountManagmentSvc struct {
 	logic logic.AccountManagmentSvcLogicIer
 }
 
-func NewAccountManagmentSvc(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct, redis redis.Cacher) AccountManagmentSvcHandler {
+func NewAccountManagmentSvc(ds datasource.DataSourceI, jwtService jwtSvc.JWTService, msgQueue config.MsgQueue, cookie config.CookieStruct) AccountManagmentSvcHandler {
 	svc := &accountManagmentSvc{
-		logic: logic.NewAccountManagmentSvcLogic(ds, jwtService, msgQueue, cookie, redis),
+		logic: logic.NewAccountManagmentSvcLogic(ds, jwtService, msgQueue, cookie),
 	}
 	AddHealthChecker(svc)
 	return svc

@@ -38,7 +38,7 @@ func Register(svcCfg *config.SvcConfig) *mux.Router {
 
 func attachAccountManagmentSvcRoutes(m *mux.Router, svcCfg *config.SvcConfig) *mux.Router {
 	dataSource := datasource.NewSql(svcCfg.DbSvc, svcCfg.Cfg.DataBase.TableName)
-	svc := handler.NewAccountManagmentSvc(dataSource, svcCfg.JwtSvc.JwtSvc, svcCfg.MsgBrokerSvc, svcCfg.Cfg.Cookie, svcCfg.Cacher.Cacher)
+	svc := handler.NewAccountManagmentSvc(dataSource, svcCfg.JwtSvc.JwtSvc, svcCfg.MsgBrokerSvc, svcCfg.Cfg.Cookie)
 	middleware := middleware2.NewAccMgmtMiddleware(svcCfg)
 
 	route1 := m.PathPrefix("").Subrouter()
