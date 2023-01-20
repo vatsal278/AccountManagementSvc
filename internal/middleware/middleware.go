@@ -17,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type AccMgmtMiddleware struct {
@@ -133,7 +132,7 @@ func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Hand
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var key string
-
+			var cacheResponse model.CacheResponse
 			key = fmt.Sprint(r.URL.String())
 			if requireAuth != false {
 				id := session.GetSession(r.Context())
@@ -144,7 +143,6 @@ func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Hand
 				}
 				key = fmt.Sprint(key + "/auth/" + idStr)
 			}
-			var cacheResponse model.CacheResponse
 			Cacher := u.cacher
 			by, err := Cacher.Get(key)
 			if err == nil {
@@ -160,7 +158,8 @@ func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Hand
 			}
 			hijackedWriter := &respWriterWithStatus{-1, "", w}
 			next.ServeHTTP(hijackedWriter, r)
-			if hijackedWriter.status < 200 && hijackedWriter.status >= 300 {
+			log.Error(hijackedWriter.status)
+			if hijackedWriter.status < 200 || hijackedWriter.status >= 300 {
 				return
 			}
 			cacheResponse = model.CacheResponse{
@@ -168,12 +167,8 @@ func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Hand
 				Response:    hijackedWriter.response,
 				ContentType: w.Header().Get("Content-Type"),
 			}
-			duration, err := time.ParseDuration(u.cfg.Cache.Duration)
-			if err != nil {
-				log.Error()
-				return
-			}
-			err = Cacher.Set(key, cacheResponse, duration)
+
+			err = Cacher.Set(key, cacheResponse, u.cfg.Cache.Time)
 			if err != nil {
 				log.Error(err)
 				return

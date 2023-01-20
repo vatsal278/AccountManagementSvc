@@ -75,6 +75,7 @@ type CacheCfg struct {
 	Port     string `json:"port"`
 	Host     string `json:"host"`
 	Duration string `json:"duration"`
+	Time     time.Duration
 }
 type CacherSvc struct {
 	Cacher redis.Cacher
@@ -142,6 +143,10 @@ func InitSvcConfig(cfg Config) *SvcConfig {
 		panic(err.Error())
 	}
 	cacher := redis.NewCacher(redis.Config{Addr: cfg.Cache.Host + ":" + cfg.Cache.Port})
+	cfg.Cache.Time, err = time.ParseDuration(cfg.Cache.Duration)
+	if err != nil {
+		panic(err.Error())
+	}
 	return &SvcConfig{
 		Cfg:                 &cfg,
 		ServiceRouteVersion: cfg.ServiceRouteVersion,
