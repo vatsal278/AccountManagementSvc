@@ -2,11 +2,14 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"github.com/PereRohit/util/log"
 	"github.com/PereRohit/util/response"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	svcCfg "github.com/vatsal278/AccountManagmentSvc/internal/config"
+	"github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
 	"github.com/vatsal278/go-redis-cache"
@@ -125,28 +128,92 @@ func (u AccMgmtMiddleware) ScreenRequest(next http.Handler) http.Handler {
 	})
 }
 
-func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := session.GetSession(r.Context())
-		idStr, ok := id.(string)
-		if !ok {
-			response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
-			return
-		}
-		Cacher := u.cacher
-		by, err := Cacher.Get(r.RemoteAddr + r.URL.String() + idStr)
-		if err != nil || len(by) == 0 {
-			hijackedWriter := &respWriterWithStatus{-1, "", w}
-			next.ServeHTTP(hijackedWriter, r)
-			if hijackedWriter.status >= 200 && hijackedWriter.status < 300 {
-				err = Cacher.Set(r.RemoteAddr+r.URL.String()+idStr, hijackedWriter.response, 0)
+func (u AccMgmtMiddleware) Cacher(urlCheck bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var key string
+			key = fmt.Sprint(r.URL.String() + "/auth/")
+			if urlCheck != false {
+				id := session.GetSession(r.Context())
+				idStr, ok := id.(string)
+				if !ok {
+					response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+					return
+				}
+				key = fmt.Sprint(key + idStr)
+			}
+			var response model.CacheResponse
+			Cacher := u.cacher
+			by, err := Cacher.Get(key)
+			if err == nil {
+				err = json.Unmarshal(by, &response)
 				if err != nil {
 					log.Error(err)
 					return
 				}
+				w.Write([]byte(response.Response))
+				w.WriteHeader(response.Status)
+				w.Header().Set("Content-Type", response.ContentType)
+				return
 			}
-			return
-		}
-		w.Write(by)
-	})
+			hijackedWriter := &respWriterWithStatus{-1, "", w}
+			next.ServeHTTP(hijackedWriter, r)
+			if hijackedWriter.status < 200 && hijackedWriter.status >= 300 {
+				return
+			}
+			response = model.CacheResponse{
+				Status:      hijackedWriter.status,
+				Response:    hijackedWriter.response,
+				ContentType: w.Header().Get("Content-Type"),
+			}
+			err = Cacher.Set(key, response, 0)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+		})
+	}
 }
+
+//func (u AccMgmtMiddleware) Cacher(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		id := session.GetSession(r.Context())
+//		idStr, ok := id.(string)
+//		if !ok {
+//			response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+//			return
+//		}
+//		//flag to fetch uuid or not
+//		//take the respoinse into struct from redis ...
+//		//9+url/token/id ...
+//		var response model.CacheResponse
+//		Cacher := u.cacher
+//		by, err := Cacher.Get(r.URL.String() + "/user_id/" + idStr)
+//		if err == nil {
+//			err = json.Unmarshal(by, &response)
+//			if err != nil {
+//				log.Error(err)
+//				return
+//			}
+//			w.Write([]byte(response.Response))
+//			w.WriteHeader(response.Status)
+//			w.Header().Set("Content-Type", response.ContentType)
+//			return
+//		}
+//		hijackedWriter := &respWriterWithStatus{-1, "", w}
+//		next.ServeHTTP(hijackedWriter, r)
+//		if hijackedWriter.status < 200 && hijackedWriter.status >= 300 {
+//			return
+//		}
+//		response = model.CacheResponse{
+//			Status:      hijackedWriter.status,
+//			Response:    hijackedWriter.response,
+//			ContentType: w.Header().Get("Content-Type"),
+//		}
+//		err = Cacher.Set(r.URL.String()+"/user_id/"+idStr, response, 0)
+//		if err != nil {
+//			log.Error(err)
+//			return
+//		}
+//	})
+//}

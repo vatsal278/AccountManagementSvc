@@ -113,15 +113,6 @@ func (l accountManagmentSvcLogic) AccountDetails(id string) *respModel.Response 
 		ActiveServices:   acc[0].ActiveServices,
 		InactiveServices: acc[0].InactiveServices,
 	}
-	err = l.redis.Set("accounts/summary/user_id/"+id, resp, 0)
-	if err != nil {
-		log.Error(err)
-		return &respModel.Response{
-			Status:  http.StatusInternalServerError,
-			Message: codes.GetErr(codes.ErrRedis),
-			Data:    nil,
-		}
-	}
 	return &respModel.Response{
 		Status:  http.StatusOK,
 		Message: "SUCCESS",

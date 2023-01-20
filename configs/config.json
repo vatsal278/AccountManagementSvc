@@ -1,5 +1,5 @@
 {
-  "service_route_version": "microbank/v1",
+  "service_route_version": "microbank/v1/account",
   "server_config": {
     "host": "",
     "port": "9080",
@@ -30,6 +30,6 @@
   "secret_key": "secret",
   "cache": {
     "port": "6379",
-    "host": "Redis"
+    "host": "localhost"
   }
 }
