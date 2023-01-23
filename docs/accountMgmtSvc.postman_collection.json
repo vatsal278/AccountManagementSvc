@@ -1,0 +1,123 @@
+{
+	"info": {
+		"_postman_id": "781f0f3d-e25b-47cb-8c98-0afb54e052e5",
+		"name": "account mgmtSvc",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21239620"
+	},
+	"item": [
+		{
+			"name": "Account",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8085/v1/account",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8085",
+					"path": [
+						"v1",
+						"account"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Account",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"user_id\": \"vatsal\",\r\n  \"active_services\": {},\r\n  \"inactive_services\":{}\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9080/v1/new",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9080",
+					"path": [
+						"v1",
+						"new"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateSvc",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"account_number\":1,\r\n    \"service_id\":\"1\",\r\n    \"update_type\":\"add\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9080/microbank/v1/account/update/service",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9080",
+					"path": [
+						"microbank",
+						"v1",
+						"account",
+						"update",
+						"service"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateTransaction",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"account_number\":1,\r\n    \"amount\":\"1000\",\r\n    \"transaction_type\":\"debit\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9080/microbank/v1/account/update/transaction",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9080",
+					"path": [
+						"microbank",
+						"v1",
+						"account",
+						"update",
+						"transaction"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
