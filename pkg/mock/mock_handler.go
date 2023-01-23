@@ -73,3 +73,27 @@ func (mr *MockAccountManagmentSvcHandlerMockRecorder) HealthCheck() *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).HealthCheck))
 }
+
+// UpdateService mocks base method.
+func (m *MockAccountManagmentSvcHandler) UpdateService(arg0 http.ResponseWriter, arg1 *http.Request) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateService", arg0, arg1)
+}
+
+// UpdateService indicates an expected call of UpdateService.
+func (mr *MockAccountManagmentSvcHandlerMockRecorder) UpdateService(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateService", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).UpdateService), arg0, arg1)
+}
+
+// UpdateTransaction mocks base method.
+func (m *MockAccountManagmentSvcHandler) UpdateTransaction(arg0 http.ResponseWriter, arg1 *http.Request) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateTransaction", arg0, arg1)
+}
+
+// UpdateTransaction indicates an expected call of UpdateTransaction.
+func (mr *MockAccountManagmentSvcHandlerMockRecorder) UpdateTransaction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransaction", reflect.TypeOf((*MockAccountManagmentSvcHandler)(nil).UpdateTransaction), arg0, arg1)
+}

@@ -96,7 +96,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().CreateAccount(gomock.Any()).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().CreateAccount(model.NewAccount{UserId: "123"}).Times(1).Return(&respModel.Response{
 					Status:  http.StatusCreated,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -110,7 +110,7 @@ func TestAccountManagmentSvc_CreateAccount(t *testing.T) {
 				if err != nil {
 					t.Fail()
 				}
-				r := httptest.NewRequest("POST", "/new_account", bytes.NewBuffer(by))
+				r := httptest.NewRequest("POST", "/account", bytes.NewBuffer(by))
 				return svc, r
 			},
 			want: func(rec httptest.ResponseRecorder) {
@@ -309,6 +309,282 @@ func TestAccountManagmentSvc_AccountSummary(t *testing.T) {
 			w := httptest.NewRecorder()
 			x, r := tt.setup()
 			x.AccountSummary(w, r)
+			tt.want(*w)
+		})
+	}
+}
+func TestAccountManagmentSvc_UpdateService(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name  string
+		model model.NewAccount
+		setup func() (*accountManagmentSvc, *http.Request)
+		want  func(recorder httptest.ResponseRecorder)
+	}{
+		{
+			name: "Success",
+			model: model.NewAccount{
+				UserId: "123",
+			},
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				mockLogic.EXPECT().UpdateServices("1234", model.UpdateServices{AccountNumber: 1, ServiceId: "1", UpdateType: "add"}).Times(1).Return(&respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: codes.GetErr(codes.Success),
+					Data:    nil,
+				})
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				by, err := json.Marshal(model.UpdateServices{
+					AccountNumber: 1,
+					ServiceId:     "1",
+					UpdateType:    "add",
+				})
+				if err != nil {
+					t.Fail()
+				}
+				r := httptest.NewRequest("PUT", "/account/update/service", bytes.NewBuffer(by))
+				ctx := session.SetSession(r.Context(), "1234")
+				return svc, r.WithContext(ctx)
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: codes.GetErr(codes.Success),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+
+			},
+		},
+		{
+			name: "Failure :: UpdateService:: Read all failure",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/account/update/service", Reader(""))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: "request body read : test error",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+		{
+			name: "Failure :: UpdateService:: json unmarshall failure",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/account/update/service", bytes.NewBuffer([]byte("")))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: "put data into data: unexpected end of JSON input",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+		{
+			name: "Failure::err assert user_id",
+			model: model.NewAccount{
+				UserId: "123",
+			},
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				by, err := json.Marshal(model.UpdateServices{
+					AccountNumber: 1,
+					ServiceId:     "1",
+					UpdateType:    "add",
+				})
+				if err != nil {
+					t.Fail()
+				}
+				r := httptest.NewRequest("PUT", "/account/update/service", bytes.NewBuffer(by))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: codes.GetErr(codes.ErrAssertUserid),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			x, r := tt.setup()
+			x.UpdateService(w, r)
+			tt.want(*w)
+		})
+	}
+}
+func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name  string
+		model model.NewAccount
+		setup func() (*accountManagmentSvc, *http.Request)
+		want  func(recorder httptest.ResponseRecorder)
+	}{
+		{
+			name: "Success",
+			model: model.NewAccount{
+				UserId: "123",
+			},
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				mockLogic.EXPECT().UpdateTransaction(model.UpdateTransaction{AccountNumber: 1, Amount: "1000", TransactionType: "debit"}).Times(1).Return(&respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: codes.GetErr(codes.Success),
+					Data:    nil,
+				})
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				by, err := json.Marshal(model.UpdateTransaction{
+					AccountNumber:   1,
+					Amount:          "1000",
+					TransactionType: "debit",
+				})
+				if err != nil {
+					t.Fail()
+				}
+				r := httptest.NewRequest("PUT", "/account/update/transaction", bytes.NewBuffer(by))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusAccepted,
+					Message: codes.GetErr(codes.Success),
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+
+			},
+		},
+		{
+			name: "Failure :: UpdateService:: Read all failure",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/account/update/transaction", Reader(""))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusInternalServerError,
+					Message: "request body read : test error",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+		{
+			name: "Failure :: UpdateService:: json unmarshall failure",
+			setup: func() (*accountManagmentSvc, *http.Request) {
+				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
+				svc := &accountManagmentSvc{
+					logic: mockLogic,
+				}
+				r := httptest.NewRequest("PUT", "/account/update/transaction", bytes.NewBuffer([]byte("")))
+				return svc, r
+			},
+			want: func(rec httptest.ResponseRecorder) {
+				b, err := ioutil.ReadAll(rec.Body)
+				if err != nil {
+					return
+				}
+				var response respModel.Response
+				err = json.Unmarshal(b, &response)
+				tempResp := &respModel.Response{
+					Status:  http.StatusBadRequest,
+					Message: "put data into data: unexpected end of JSON input",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&response, tempResp) {
+					t.Errorf("Want: %v, Got: %v", tempResp, &response)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			x, r := tt.setup()
+			x.UpdateTransaction(w, r)
 			tt.want(*w)
 		})
 	}
