@@ -7,7 +7,7 @@
 * This service is completely unit tested and all the errors have been handled.
 * This service utilises messageBroker service for communicating with other micro services.
 
-## Starting the UserManagementService
+## Starting the AccountManagementService
 
 * Start the Docker container for mysql with command :
 ```
@@ -192,4 +192,4 @@ Response Body(json):
 1. ExtractUser: extracts the user_id from the cookie passed in the request and forwards it in the context for downstream processing.
 2. ScreenRequest: allows requests only from the message queue to be passed downstream. The middleware checks the “`user-agent`” & request `URL` to identify requests originating from the message queue.
    *The URL(s) of the message queue(s) is passed as a configuration to the service to allow requests only from URLs in the list*.
-3. Caching middleware
+3. Caching middleware:: allows us to cache the successful responses into cache so that we don't need to make queries repeatedly to the actual database.
