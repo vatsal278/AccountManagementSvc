@@ -1,4 +1,4 @@
-# AccountManagmentSvc
+# Account Management Service
 
 [![Build](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml) [![Test Cases](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml) [![Codecov](https://codecov.io/gh/vatsal278/AccountManagmentSvc/branch/main/graph/badge.svg)](https://codecov.io/gh/vatsal278/AccountManagmentSvc)
 
@@ -7,11 +7,11 @@
 * This service is completely unit tested and all the errors have been handled.
 * This service utilises messageBroker service for communicating with other micro services.
 
-## Starting the AccountManagementService
+## Starting the Account Management Service
 
 * Start the Docker container for mysql with command :
 ```
-docker run --publish `local PORT`:3306 -d mysql
+docker run --publish 9085:3306 -d mysql
 ```
 * Start the MsgBroker service using steps as described in the [link](https://github.com/vatsal278/msgbroker)
 
@@ -52,12 +52,11 @@ Requests are specific to the concerned endpoint while responses are of the follo
 >       }
 >    }
 >    ```
-# AccManagementSvc-Design
 
-## AccManagementSvc Endpoints
+## Account Management Service Endpoints
 
 ## Create Account
-This endpoint will be triggered from user management service through message que once a new user is registered, user management service triggers this endpoint to create a new account in a Relational DB with `account_number` as the `primary key` and as a `int`,`user_id`as `string` and it should be `unique`, `income` and `spends` as `decimal`,`created_at` and `updated_at` as `timestamp` `active_services` and `inactive_services` as `json` and once its done we will notify the user mgmt svc through msg queue which will update the status of new user account as active. 
+This endpoint will be triggered from user management service through message que once a new user is registered, user management service triggers this endpoint to create a new account in a Relational DB and once its done it notifies the user mgmt svc through msg queue which will update the status of new user account as active.
 #### Specification:
 Method: `POST`
 
@@ -66,7 +65,7 @@ Path: `/account`
 Request Body:
 ```json
 {
-  "user_id": "<user_id for the record to activate>"
+   "user_id": "<user_id for the record to activate>"
 }
 ```
 
@@ -77,14 +76,14 @@ Response Header: HTTP 200
 Response Body(json):
 ```json
 {
-  "status": 201,
-  "message": "SUCCESS",
-  "data": nil
+   "status": 201,
+   "message": "SUCCESS",
+   "data": nil
 }
 ```
 
 ## Account Summary
-A user hits this endpoint in order to view the details of their account. They can view details like the services that are available and services that they want to subscribe to.
+A user hits this endpoint in order to view the details of their account.
 There will be jwt token containing userid in cookie
 #### Specification:
 Method: `GET`
@@ -100,19 +99,19 @@ Response Header: HTTP 200
 Response Body(json):
 ```json
 {
-  "status": 200,
-  "message": "SUCCESS",
-  "data": {
-    "account_number": "<full account number>",
-    "income": <income calculated based on all incoming transactions> as float,
-    "spends": <spends calculated based on all outgoing transactions> as float,
-    "active_services": ["<list of all services that user has subscribed to>",],
-    "available_services": ["<list of all services that user has not subscribed to but are available for subscription>",]
-  }
+   "status": 200,
+   "message": "SUCCESS",
+   "data": {
+      "account_number": "<full account number>",
+      "income": <income calculated based on all incoming transactions> as float,
+      "spends": <spends calculated based on all outgoing transactions> as float,
+      "active_services": ["<list of all services that user has subscribed to>",],
+      "available_services": ["<list of all services that user has not subscribed to but are available for subscription>",]
+   }
 }
 ```
 
-## Latest Transaction
+## Update Transaction
 This endpoint updates the income and spends column in db according to type of transaction.
 #### Specification:
 Method: `PUT`
@@ -122,9 +121,9 @@ Path: `/account/update/transaction`
 Request Body:
 ```json
 {
-  "account_number":"acc_no."
-  "amount": "amount of the transaction",
-  "type":"debit or credit"
+   "account_number":"acc_no."
+   "amount": "amount of the transaction",
+   "type":"debit or credit"
 }
 ```
 
@@ -135,9 +134,9 @@ Response Header: HTTP 200
 Response Body(json):
 ```json
 {
-  "status": 202,
-  "message": "SUCCESS",
-  "data": nil
+   "status": 202,
+   "message": "SUCCESS",
+   "data": nil
 }
 ```
 
@@ -151,9 +150,9 @@ Path: `/account/update/transaction`
 Request Body:
 ```json
 {
-  "account_number":"acc_no.",
-  "service_id": "id of service that needs to be removed or added",
-  "type":"add or remove"
+   "account_number":"acc_no.",
+   "service_id": "id of service that needs to be removed or added",
+   "type":"add or remove"
 }
 ```
 
@@ -164,13 +163,13 @@ Response Header: HTTP 200
 Response Body(json):
 ```json
 {
-  "status": 202,
-  "message": "SUCCESS",
-  "data": nil
+   "status": 202,
+   "message": "SUCCESS",
+   "data": nil
 }
 ```
 
-## AccManagementSvc Middlewares
+## Account Management Service Middlewares
 
 1. ExtractUser: extracts the user_id from the cookie passed in the request and forwards it in the context for downstream processing.
 2. ScreenRequest: allows requests only from the message queue to be passed downstream. The middleware checks the “`user-agent`” & request `URL` to identify requests originating from the message queue.
