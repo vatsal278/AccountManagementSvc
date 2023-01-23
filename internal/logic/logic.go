@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"errors"
 	"fmt"
 	"github.com/PereRohit/util/log"
 	respModel "github.com/PereRohit/util/model"
@@ -18,6 +19,8 @@ type AccountManagmentSvcLogicIer interface {
 	HealthCheck() bool
 	CreateAccount(account model.NewAccount) *respModel.Response
 	AccountDetails(id string) *respModel.Response
+	UpdateServices(id string, services model.UpdateServices) *respModel.Response
+	UpdateTransaction(transaction model.UpdateTransaction) *respModel.Response
 }
 
 type accountManagmentSvcLogic struct {
@@ -75,7 +78,6 @@ func (l accountManagmentSvcLogic) CreateAccount(account model.NewAccount) *respM
 			log.Error(err)
 			return
 		}
-		return
 	}(account.UserId, l.msgQueue.PubId, l.msgQueue.Channel)
 	return &respModel.Response{
 		Status:  http.StatusCreated,
@@ -112,5 +114,72 @@ func (l accountManagmentSvcLogic) AccountDetails(id string) *respModel.Response 
 		Status:  http.StatusOK,
 		Message: "SUCCESS",
 		Data:    resp,
+	}
+}
+
+func (l accountManagmentSvcLogic) UpdateServices(id string, services model.UpdateServices) *respModel.Response {
+	var query map[string]interface{}
+	switch services.UpdateType {
+	case "add":
+		insertQuery := fmt.Sprintf("JSON_INSERT(%s, '$.\"%s\"', JSON_OBJECT())", "active_services", services.ServiceId)
+		removeQuery := fmt.Sprintf("JSON_REMOVE(%s, '$.\"%s\"')", "inactive_services", services.ServiceId)
+		query = map[string]interface{}{"active_services": model.ColumnUpdate{UpdateSet: insertQuery}, "inactive_services": model.ColumnUpdate{UpdateSet: removeQuery}}
+	case "remove":
+		insertQuery := fmt.Sprintf("JSON_INSERT(%s, '$.\"%s\"', JSON_OBJECT())", "inactive_services", services.ServiceId)
+		removeQuery := fmt.Sprintf("JSON_REMOVE(%s, '$.\"%s\"')", "active_services", services.ServiceId)
+		query = map[string]interface{}{"inactive_services": model.ColumnUpdate{UpdateSet: insertQuery}, "active_services": model.ColumnUpdate{UpdateSet: removeQuery}}
+	default:
+		log.Error(errors.New("incorrect update query "))
+		return &respModel.Response{
+			Status:  http.StatusBadRequest,
+			Message: codes.GetErr(codes.ErrUpdatingServices),
+			Data:    nil,
+		}
+	}
+	err := l.DsSvc.Update(query, map[string]interface{}{"user_id": id, "account_number": services.AccountNumber})
+	if err != nil {
+		log.Error(err)
+		return &respModel.Response{
+			Status:  http.StatusInternalServerError,
+			Message: codes.GetErr(codes.ErrUpdatingServices),
+			Data:    nil,
+		}
+	}
+	return &respModel.Response{
+		Status:  http.StatusAccepted,
+		Message: "SUCCESS",
+		Data:    nil,
+	}
+}
+func (l accountManagmentSvcLogic) UpdateTransaction(transaction model.UpdateTransaction) *respModel.Response {
+	var query map[string]interface{}
+	switch transaction.TransactionType {
+	case "debit":
+		spends := fmt.Sprintf("spends + %s", transaction.Amount)
+		query = map[string]interface{}{"spends": model.ColumnUpdate{UpdateSet: spends}}
+	case "credit":
+		spends := fmt.Sprintf("income + %s", transaction.Amount)
+		query = map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: spends}}
+	default:
+		log.Error(errors.New("incorrect transaction type "))
+		return &respModel.Response{
+			Status:  http.StatusBadRequest,
+			Message: codes.GetErr(codes.ErrUpdatingTransaction),
+			Data:    nil,
+		}
+	}
+	err := l.DsSvc.Update(query, map[string]interface{}{"account_number": transaction.AccountNumber})
+	if err != nil {
+		log.Error(err)
+		return &respModel.Response{
+			Status:  http.StatusInternalServerError,
+			Message: codes.GetErr(codes.ErrUpdatingTransaction),
+			Data:    nil,
+		}
+	}
+	return &respModel.Response{
+		Status:  http.StatusAccepted,
+		Message: "SUCCESS",
+		Data:    nil,
 	}
 }

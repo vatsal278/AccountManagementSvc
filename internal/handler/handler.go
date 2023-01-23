@@ -22,6 +22,8 @@ type AccountManagmentSvcHandler interface {
 	HealthChecker
 	CreateAccount(w http.ResponseWriter, r *http.Request)
 	AccountSummary(w http.ResponseWriter, r *http.Request)
+	UpdateService(w http.ResponseWriter, r *http.Request)
+	UpdateTransaction(w http.ResponseWriter, r *http.Request)
 }
 
 type accountManagmentSvc struct {
@@ -70,5 +72,33 @@ func (svc accountManagmentSvc) AccountSummary(w http.ResponseWriter, r *http.Req
 		return
 	}
 	resp := svc.logic.AccountDetails(idStr)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
+}
+func (svc accountManagmentSvc) UpdateService(w http.ResponseWriter, r *http.Request) {
+	var data model.UpdateServices
+	status, err := request.FromJson(r, &data)
+	if err != nil {
+		log.Error(err)
+		response.ToJson(w, status, err.Error(), nil)
+		return
+	}
+	id := session.GetSession(r.Context())
+	idStr, ok := id.(string)
+	if !ok {
+		response.ToJson(w, http.StatusBadRequest, codes.GetErr(codes.ErrAssertUserid), nil)
+		return
+	}
+	resp := svc.logic.UpdateServices(idStr, data)
+	response.ToJson(w, resp.Status, resp.Message, resp.Data)
+}
+func (svc accountManagmentSvc) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+	var data model.UpdateTransaction
+	status, err := request.FromJson(r, &data)
+	if err != nil {
+		log.Error(err)
+		response.ToJson(w, status, err.Error(), nil)
+		return
+	}
+	resp := svc.logic.UpdateTransaction(data)
 	response.ToJson(w, resp.Status, resp.Message, resp.Data)
 }

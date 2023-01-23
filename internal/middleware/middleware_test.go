@@ -9,15 +9,18 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/vatsal278/AccountManagmentSvc/internal/codes"
 	"github.com/vatsal278/AccountManagmentSvc/internal/config"
+	model2 "github.com/vatsal278/AccountManagmentSvc/internal/model"
 	"github.com/vatsal278/AccountManagmentSvc/internal/repo/authentication"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/mock"
 	"github.com/vatsal278/AccountManagmentSvc/pkg/session"
+	redisMock "github.com/vatsal278/go-redis-cache/mocks"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var x func()
@@ -26,6 +29,12 @@ var hit = false
 
 func test(w http.ResponseWriter, r *http.Request) {
 	hit = true
+	if r.Method != http.MethodGet {
+		c := r.Context()
+		id := session.GetSession(c)
+		response.ToJson(w, http.StatusBadRequest, "passed", id)
+		return
+	}
 	c := r.Context()
 	id := session.GetSession(c)
 	response.ToJson(w, http.StatusOK, "passed", id)
@@ -584,6 +593,212 @@ func TestUserMgmtMiddleware_ScreenRequest(t *testing.T) {
 			hit = false
 			x := middleware.ScreenRequest(http.HandlerFunc(test))
 			x.ServeHTTP(res, req)
+
+			tt.validator(res)
+
+		})
+	}
+}
+func TestUserMgmtMiddleware_Cacher(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	tests := []struct {
+		name           string
+		config         config.Config
+		extractMsgFunc func(closer io.ReadCloser) (string, error)
+		setupFunc      func() (*http.Request, *redisMock.MockCacher)
+		validator      func(*httptest.ResponseRecorder)
+	}{
+		{
+			name:   "SUCCESS::Cacher::Cached Response",
+			config: config.Config{},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+
+				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), "123")
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				cacheResponse := model2.CacheResponse{Status: http.StatusOK, Response: "ok", ContentType: "application/json"}
+				b, _ := json.Marshal(cacheResponse)
+				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(b, nil)
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				if hit != false {
+					t.Errorf("Want: %v, Got: %v", false, hit)
+					return
+				}
+				by, _ := ioutil.ReadAll(res.Body)
+				if !reflect.DeepEqual([]byte("ok"), by) {
+					t.Errorf("Want: %v, Got: %v", "ok", string(by))
+				}
+			},
+		},
+		{
+			name:   "Failure::Cacher::Cached Response::Err assert id",
+			config: config.Config{},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+
+				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), 1)
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				by, _ := ioutil.ReadAll(res.Body)
+				result := model.Response{}
+				err := json.Unmarshal(by, &result)
+				if err != nil {
+					t.Log(err)
+					return
+				}
+				expected := &model.Response{
+					Status:  http.StatusBadRequest,
+					Message: "1004: unable to assert userid",
+					Data:    nil,
+				}
+				if !reflect.DeepEqual(&result, expected) {
+					t.Errorf("Want: %v, Got: %v", expected, result)
+				}
+			},
+		},
+		{
+			name:   "Failure::Cacher::Cached Response::unmarshal error",
+			config: config.Config{},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+
+				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), "123")
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return([]byte("123"), nil)
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				if hit != false {
+					t.Errorf("Want: %v, Got: %v", false, hit)
+					return
+				}
+				by, _ := ioutil.ReadAll(res.Body)
+				if !reflect.DeepEqual([]byte(""), by) {
+					t.Errorf("Want: %v, Got: %v", "", string(by))
+				}
+			},
+		},
+		{
+			name:   "SUCCESS::Cacher::Normal Response",
+			config: config.Config{Cache: config.CacheCfg{Time: time.Minute}},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+
+				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), "123")
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				//x := model.Response{Status: 200, Message: "passed", Data: "123"}
+				//y, _ := json.Marshal(x)
+				//cacheResponse := model2.CacheResponse{Status: http.StatusOK, Response: string(y), ContentType: "application/json"}
+				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(nil, errors.New("error"))
+				mockCacher.EXPECT().Set("http://localhost:80/auth/123", gomock.Any(), time.Minute)
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				if hit != true {
+					t.Errorf("Want: %v, Got: %v", true, hit)
+					return
+				}
+				var resp model.Response
+				by, _ := ioutil.ReadAll(res.Body)
+				json.Unmarshal(by, &resp)
+				expectedResp := model.Response{Status: 200, Message: "passed", Data: "123"}
+				if !reflect.DeepEqual(expectedResp, resp) {
+					t.Errorf("Want: %v, Got: %v", expectedResp, string(by))
+				}
+			},
+		},
+		{
+			name:   "Failure::Cacher::Normal Response::Redis fail",
+			config: config.Config{Cache: config.CacheCfg{Time: time.Minute}},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+
+				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), "123")
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				//x := model.Response{Status: 200, Message: "passed", Data: "123"}
+				//y, _ := json.Marshal(x)
+				//cacheResponse := model2.CacheResponse{Status: http.StatusOK, Response: string(y), ContentType: "application/json"}
+				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(nil, errors.New("error"))
+				mockCacher.EXPECT().Set("http://localhost:80/auth/123", gomock.Any(), time.Minute).Return(errors.New("error"))
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				if hit != true {
+					t.Errorf("Want: %v, Got: %v", true, hit)
+					return
+				}
+				var resp model.Response
+				by, _ := ioutil.ReadAll(res.Body)
+				json.Unmarshal(by, &resp)
+				expectedResp := model.Response{Status: 200, Message: "passed", Data: "123"}
+				if !reflect.DeepEqual(expectedResp, resp) {
+					t.Errorf("Want: %v, Got: %v", expectedResp, string(by))
+				}
+			},
+		},
+		{
+			name:   "Failure::Cacher::Normal Response::Failure status code ",
+			config: config.Config{Cache: config.CacheCfg{Time: time.Minute}},
+			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
+				req := httptest.NewRequest(http.MethodPost, "http://localhost:80", nil)
+				ctx := session.SetSession(req.Context(), "123")
+				mockCacher := redisMock.NewMockCacher(mockCtrl)
+				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(nil, errors.New("error"))
+				return req.WithContext(ctx), mockCacher
+			},
+			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
+				return "", nil
+			},
+			validator: func(res *httptest.ResponseRecorder) {
+				if hit != true {
+					t.Errorf("Want: %v, Got: %v", true, hit)
+					return
+				}
+				var resp model.Response
+				by, _ := ioutil.ReadAll(res.Body)
+				json.Unmarshal(by, &resp)
+				expectedResp := model.Response{Status: 400, Message: "passed", Data: "123"}
+				if !reflect.DeepEqual(expectedResp, resp) {
+					t.Errorf("Want: %v, Got: %v", expectedResp, string(by))
+				}
+			},
+		},
+	}
+
+	// to execute the tests in the table
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// STEP 1: seting up all instances for the specific test case
+			res := httptest.NewRecorder()
+			req, cacher := tt.setupFunc()
+			cfg := config.SvcConfig{Cfg: &tt.config}
+			middleware := AccMgmtMiddleware{
+				msg:    tt.extractMsgFunc,
+				cacher: cacher,
+				cfg:    cfg.Cfg}
+			hit = false
+			x := middleware.Cacher(true)
+			x(http.HandlerFunc(test)).ServeHTTP(res, req)
 
 			tt.validator(res)
 

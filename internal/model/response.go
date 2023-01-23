@@ -7,3 +7,8 @@ type AccountSummary struct {
 	ActiveServices   *Svc    `json:"active_services"`
 	InactiveServices *Svc    `json:"inactive_services"`
 }
+type CacheResponse struct {
+	Status      int
+	Response    string
+	ContentType string
+}
