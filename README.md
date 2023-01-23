@@ -11,7 +11,7 @@
 
 * Start the Docker container for mysql with command :
 ```
-docker run --rm --env MYSQL_ROOT_PASSWORD=pass --env MYSQL_DATABASE=accmgmt --publish 9085:3306 --name mysqlDb -d mysql
+docker run --publish `local PORT`:3306 -d mysql
 ```
 * Start the MsgBroker service using steps as described in the [link](https://github.com/vatsal278/msgbroker)
 
@@ -57,26 +57,34 @@ Requests are specific to the concerned endpoint while responses are of the follo
 ## AccManagementSvc Endpoints
 
 ## Create Account
-This endpoint is used to create a new account in a Relational DB with `account_number` as the `primary key` and as a `int`,`user_id`as `string` and it should be `unique`, `income` and `spends` as `decimal`,`created_at` and `updated_at` as `timestamp` `active_services` and `inactive_services` as `json` and once its done we will notify the user mgmt svc through msg queue. This endpoint will get hit from usermanagement service through msg queue.
+This endpoint will be triggered from user management service through message que once a new user is registered, user management service triggers this endpoint to create a new account in a Relational DB with `account_number` as the `primary key` and as a `int`,`user_id`as `string` and it should be `unique`, `income` and `spends` as `decimal`,`created_at` and `updated_at` as `timestamp` `active_services` and `inactive_services` as `json` and once its done we will notify the user mgmt svc through msg queue which will update the status of new user account as active. 
+#### Specification:
+Method: `POST`
 
-DbSchema:
+Path: `/account`
+
+Request Body:
+```json
+{
+  "user_id": "<user_id for the record to activate>"
+}
 ```
-+-------------------+---------------+------+-----+-------------------+-----------------------------------------------+
-| Field             | Type          | Null | Key | Default           | Extra                                         |
-+-------------------+---------------+------+-----+-------------------+-----------------------------------------------+
-| user_id           | varchar(255)  | NO   | UNI | NULL              |                                               |
-| account_num       | int           | NO   | PRI | NULL              | auto_increment                                |
-| income            | decimal(18,2) | YES  |     | 0.00              |                                               |
-| spends            | decimal(18,2) | YES  |     | 0.00              |                                               |
-| created_at        | timestamp     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED                             |
-| updated_at        | timestamp     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED on update CURRENT_TIMESTAMP |
-| active_services   | json          | NO   |     | json_object()     | DEFAULT_GENERATED                             |
-| inactive_services | json          | NO   |     | json_object()     | DEFAULT_GENERATED                             |
-+-------------------+---------------+------+-----+-------------------+-----------------------------------------------+
+
+Success to follow response as specified:
+
+Response Header: HTTP 200
+
+Response Body(json):
+```json
+{
+  "status": 201,
+  "message": "SUCCESS",
+  "data": nil
+}
 ```
 
 ## Account Summary
-A user hits this endpoint in order to view the details of their account. They can view details like the services that are available and services that theywant to subscribe to.
+A user hits this endpoint in order to view the details of their account. They can view details like the services that are available and services that they want to subscribe to.
 There will be jwt token containing userid in cookie
 #### Specification:
 Method: `GET`
@@ -104,33 +112,8 @@ Response Body(json):
 }
 ```
 
-#### Specification:
-Method: `POST`
-
-Path: `/account`
-
-Request Body:
-```json
-{
-  "user_id": "<user_id for the record to activate>"
-}
-```
-
-Success to follow response as specified:
-
-Response Header: HTTP 200
-
-Response Body(json):
-```json
-{
-  "status": 201,
-  "message": "SUCCESS",
-  "data": nil
-}
-```
-
 ## Latest Transaction
-This endpoint receives the details of latest transaction and it updates the income and spends column in db according to type of transaction
+This endpoint updates the income and spends column in db according to type of transaction.
 #### Specification:
 Method: `PUT`
 
@@ -159,7 +142,7 @@ Response Body(json):
 ```
 
 ## Update services
-This endpoint updates the active service and available service column acc to query
+This endpoint updates the services column acc to query
 #### Specification:
 Method: `PUT`
 
