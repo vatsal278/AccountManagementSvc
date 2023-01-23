@@ -103,10 +103,10 @@ Response Body(json):
    "message": "SUCCESS",
    "data": {
       "account_number": "<full account number>",
-      "income": <income calculated based on all incoming transactions> as float,
-      "spends": <spends calculated based on all outgoing transactions> as float,
-      "active_services": ["<list of all services that user has subscribed to>",],
-      "available_services": ["<list of all services that user has not subscribed to but are available for subscription>",]
+      "income": <income calculated based on all incoming transactions> as float>,
+      "spends": <spends calculated based on all outgoing transactions> as float>,
+      "active_services": ["<list of all services that user has subscribed to>"],
+      "available_services": ["<list of all services that user has not subscribed to but are available for subscription>"]
    }
 }
 ```
@@ -121,7 +121,7 @@ Path: `/account/update/transaction`
 Request Body:
 ```json
 {
-   "account_number":"acc_no."
+   "account_number":"acc_no.",
    "amount": "amount of the transaction",
    "type":"debit or credit"
 }
