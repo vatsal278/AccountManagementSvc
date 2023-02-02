@@ -395,12 +395,12 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			name: "Success::DEBIT",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
-				Amount:          "1000",
+				Amount:          1000.00,
 				TransactionType: "debit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(map[string]interface{}{"spends": model.ColumnUpdate{UpdateSet: "spends + 1000"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				mockDs.EXPECT().Update(map[string]interface{}{"spends": model.ColumnUpdate{UpdateSet: "spends + 1000.00"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -418,12 +418,12 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			name: "Success :: CREDIT",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
-				Amount:          "1000",
+				Amount:          1000.00,
 				TransactionType: "credit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
 				mockDs := mock.NewMockDataSourceI(mockCtrl)
-				mockDs.EXPECT().Update(map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: "income + 1000"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
+				mockDs.EXPECT().Update(map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: "income + 1000.00"}}, map[string]interface{}{"account_number": 1}).Times(1).Return(nil)
 				return mockDs, nil, config.MsgQueue{MsgBroker: sdk.NewMsgBrokerSvc("http://localhost:9095")}, config.CookieStruct{}
 			},
 			want: func(resp *respModel.Response) {
@@ -441,7 +441,7 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			name: "Failure::DB ERR",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
-				Amount:          "1000",
+				Amount:          1000.00,
 				TransactionType: "debit",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {
@@ -464,7 +464,7 @@ func TestAccountManagmentSvcLogic_UpdateTransaction(t *testing.T) {
 			name: "Failure::default switch case",
 			credentials: model.UpdateTransaction{
 				AccountNumber:   1,
-				Amount:          "1000",
+				Amount:          1000.00,
 				TransactionType: "",
 			},
 			setup: func() (datasource.DataSourceI, authentication.JWTService, config.MsgQueue, config.CookieStruct) {

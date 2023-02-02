@@ -155,10 +155,10 @@ func (l accountManagmentSvcLogic) UpdateTransaction(transaction model.UpdateTran
 	var query map[string]interface{}
 	switch transaction.TransactionType {
 	case "debit":
-		spends := fmt.Sprintf("spends + %s", transaction.Amount)
+		spends := fmt.Sprintf("spends + %.2f", transaction.Amount)
 		query = map[string]interface{}{"spends": model.ColumnUpdate{UpdateSet: spends}}
 	case "credit":
-		spends := fmt.Sprintf("income + %s", transaction.Amount)
+		spends := fmt.Sprintf("income + %.2f", transaction.Amount)
 		query = map[string]interface{}{"income": model.ColumnUpdate{UpdateSet: spends}}
 	default:
 		log.Error(errors.New("incorrect transaction type "))
