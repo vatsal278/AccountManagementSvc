@@ -1,6 +1,6 @@
 # Account Management Service
 
-[![Build](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml) [![Test Cases](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml) [![Codecov](https://codecov.io/gh/vatsal278/AccountManagmentSvc/branch/main/graph/badge.svg)](https://codecov.io/gh/vatsal278/AccountManagmentSvc)
+[![Build](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/build.yml) [![Test Cases](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml/badge.svg)](https://github.com/vatsal278/AccountManagmentSvc/actions/workflows/test.yml) [![Codecov](https://codecov.io/gh/vatsal278/AccountManagmentSvc/branch/master/graph/badge.svg)](https://codecov.io/gh/vatsal278/AccountManagmentSvc)
 
 * This service was created using Golang.
 * This service has used clean code principle and appropriate go directory structure.
