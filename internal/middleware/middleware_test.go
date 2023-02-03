@@ -38,7 +38,6 @@ func test(w http.ResponseWriter, r *http.Request) {
 	c := r.Context()
 	id := session.GetSession(c)
 	response.ToJson(w, http.StatusOK, "passed", id)
-
 }
 
 func TestUserMgmtMiddleware_ExtractUser(t *testing.T) {
@@ -703,8 +702,9 @@ func TestUserMgmtMiddleware_Cacher(t *testing.T) {
 				//x := model.Response{Status: 200, Message: "passed", Data: "123"}
 				//y, _ := json.Marshal(x)
 				//cacheResponse := model2.CacheResponse{Status: http.StatusOK, Response: string(y), ContentType: "application/json"}
+				//z, _ := json.Marshal(cacheResponse)
 				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(nil, errors.New("error"))
-				mockCacher.EXPECT().Set("http://localhost:80/auth/123", gomock.Any(), time.Minute)
+				mockCacher.EXPECT().Set("http://localhost:80/auth/123", []byte("{\"Status\":200,\"Response\":\"{\\\"status\\\":200,\\\"message\\\":\\\"passed\\\",\\\"data\\\":\\\"123\\\"}\\n\",\"ContentType\":\"application/json\"}"), time.Minute)
 				return req.WithContext(ctx), mockCacher
 			},
 			extractMsgFunc: func(closer io.ReadCloser) (string, error) {
@@ -728,7 +728,6 @@ func TestUserMgmtMiddleware_Cacher(t *testing.T) {
 			name:   "Failure::Cacher::Normal Response::Redis fail",
 			config: config.Config{Cache: config.CacheCfg{Time: time.Minute}},
 			setupFunc: func() (*http.Request, *redisMock.MockCacher) {
-
 				req := httptest.NewRequest(http.MethodGet, "http://localhost:80", nil)
 				ctx := session.SetSession(req.Context(), "123")
 				mockCacher := redisMock.NewMockCacher(mockCtrl)
@@ -736,7 +735,7 @@ func TestUserMgmtMiddleware_Cacher(t *testing.T) {
 				//y, _ := json.Marshal(x)
 				//cacheResponse := model2.CacheResponse{Status: http.StatusOK, Response: string(y), ContentType: "application/json"}
 				mockCacher.EXPECT().Get("http://localhost:80/auth/123").Return(nil, errors.New("error"))
-				mockCacher.EXPECT().Set("http://localhost:80/auth/123", gomock.Any(), time.Minute).Return(errors.New("error"))
+				mockCacher.EXPECT().Set("http://localhost:80/auth/123", []byte("{\"Status\":200,\"Response\":\"{\\\"status\\\":200,\\\"message\\\":\\\"passed\\\",\\\"data\\\":\\\"123\\\"}\\n\",\"ContentType\":\"application/json\"}"), time.Minute).Return(errors.New("error"))
 				return req.WithContext(ctx), mockCacher
 			},
 			extractMsgFunc: func(closer io.ReadCloser) (string, error) {

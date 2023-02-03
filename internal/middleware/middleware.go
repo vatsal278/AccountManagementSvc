@@ -171,6 +171,7 @@ func (u AccMgmtMiddleware) Cacher(requireAuth bool) func(http.Handler) http.Hand
 				log.Error(err)
 				return
 			}
+			log.Info(string(byt))
 			err = Cacher.Set(key, byt, u.cfg.Cache.Time)
 			if err != nil {
 				log.Error(err)
