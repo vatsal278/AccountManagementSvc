@@ -20,7 +20,7 @@ docker run --publish 9085:3306 -d mysql
 ```
 go run .\cmd\AccountManagmentSvc\main.go
 ```
-### You can test the api using post man, just import the [Postman Collection](./docs/accountMgmtSvc.postman_collection.json) into your postman app.
+### You can test the api using post man, just import the [Postman Collection](./docs/accountmgmtSvc.postman_collection.json) into your postman app.
 ### To check the code coverage
 ```
 cd docs
