@@ -658,7 +658,7 @@ func TestUserMgmtMiddleware_Cacher(t *testing.T) {
 				}
 				expected := &model.Response{
 					Status:  http.StatusBadRequest,
-					Message: "2004: unable to assert userid",
+					Message: codes.GetErr(codes.ErrAssertUserid),
 					Data:    nil,
 				}
 				if !reflect.DeepEqual(&result, expected) {
