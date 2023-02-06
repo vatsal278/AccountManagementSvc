@@ -488,7 +488,7 @@ func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
 			},
 			setup: func() (*accountManagmentSvc, *http.Request) {
 				mockLogic := mock.NewMockAccountManagmentSvcLogicIer(mockCtrl)
-				mockLogic.EXPECT().UpdateTransaction(model.UpdateTransaction{AccountNumber: 1, Amount: "1000", TransactionType: "debit"}).Times(1).Return(&respModel.Response{
+				mockLogic.EXPECT().UpdateTransaction(model.UpdateTransaction{AccountNumber: 1, Amount: 1000.00, TransactionType: "debit"}).Times(1).Return(&respModel.Response{
 					Status:  http.StatusAccepted,
 					Message: codes.GetErr(codes.Success),
 					Data:    nil,
@@ -498,7 +498,7 @@ func TestAccountManagementSvc_UpdateTransaction(t *testing.T) {
 				}
 				by, err := json.Marshal(model.UpdateTransaction{
 					AccountNumber:   1,
-					Amount:          "1000",
+					Amount:          1000.00,
 					TransactionType: "debit",
 				})
 				if err != nil {

@@ -14,7 +14,7 @@ type UpdateServices struct {
 	UpdateType    string `json:"update_type" validate:"required,oneof=add remove"`
 }
 type UpdateTransaction struct {
-	AccountNumber   int    `json:"account_number" validate:"required"`
-	Amount          string `json:"amount" validate:"required"`
-	TransactionType string `json:"transaction_type" validate:"required,oneof=debit credit"`
+	AccountNumber   int     `json:"account_number" validate:"required"`
+	Amount          float64 `json:"amount" validate:"required"`
+	TransactionType string  `json:"transaction_type" validate:"required,oneof=debit credit"`
 }
